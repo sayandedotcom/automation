@@ -5,12 +5,30 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Plane, Calendar as CalendarIcon, Users, ArrowRightLeft } from "lucide-react";
-import { flightSearchSchema, type FlightSearchInput } from "@/lib/schemas";
+import {
+  Plane,
+  Calendar as CalendarIcon,
+  Users,
+  ArrowRightLeft,
+} from "lucide-react";
+import {
+  flightSearchSchema,
+  type FlightSearchInput,
+} from "@/lib/schema/flights";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -104,17 +122,23 @@ export function FlightSearchForm({
               <FormItem className="space-y-0">
                 <FormControl>
                   <RadioGroup
-                    onValueChange={(value) => handleTripTypeChange(value as "round-trip" | "one-way")}
+                    onValueChange={(value) =>
+                      handleTripTypeChange(value as "round-trip" | "one-way")
+                    }
                     defaultValue={field.value}
                     className="flex items-center gap-4"
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="round-trip" id="round-trip" />
-                      <Label htmlFor="round-trip" className="cursor-pointer">Round-trip</Label>
+                      <Label htmlFor="round-trip" className="cursor-pointer">
+                        Round-trip
+                      </Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="one-way" id="one-way" />
-                      <Label htmlFor="one-way" className="cursor-pointer">One-way</Label>
+                      <Label htmlFor="one-way" className="cursor-pointer">
+                        One-way
+                      </Label>
                     </div>
                   </RadioGroup>
                 </FormControl>
@@ -127,7 +151,10 @@ export function FlightSearchForm({
             name="travelClass"
             render={({ field }) => (
               <FormItem>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                >
                   <FormControl>
                     <SelectTrigger className="w-[180px] border-none shadow-none hover:bg-muted/50 focus:ring-0">
                       <SelectValue placeholder="Select class" />
@@ -135,7 +162,9 @@ export function FlightSearchForm({
                   </FormControl>
                   <SelectContent>
                     <SelectItem value="economy">Economy</SelectItem>
-                    <SelectItem value="premium_economy">Premium Economy</SelectItem>
+                    <SelectItem value="premium_economy">
+                      Premium Economy
+                    </SelectItem>
                     <SelectItem value="business">Business</SelectItem>
                     <SelectItem value="first">First Class</SelectItem>
                   </SelectContent>
@@ -156,7 +185,10 @@ export function FlightSearchForm({
                     id="direct-flights"
                   />
                 </FormControl>
-                <Label htmlFor="direct-flights" className="cursor-pointer font-normal">
+                <Label
+                  htmlFor="direct-flights"
+                  className="cursor-pointer font-normal"
+                >
                   Direct flights only
                 </Label>
               </FormItem>
@@ -173,7 +205,9 @@ export function FlightSearchForm({
               name="from"
               render={({ field }) => (
                 <FormItem className="relative flex-1 bg-background p-2 hover:bg-muted/20 transition-colors group space-y-0">
-                  <Label className="text-xs text-muted-foreground ml-9">Leaving from</Label>
+                  <Label className="text-xs text-muted-foreground ml-9">
+                    Leaving from
+                  </Label>
                   <div className="flex items-center relative">
                     <Plane className="absolute left-3 h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors z-10" />
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -213,7 +247,9 @@ export function FlightSearchForm({
               name="to"
               render={({ field }) => (
                 <FormItem className="relative flex-1 bg-background p-2 hover:bg-muted/20 transition-colors group space-y-0">
-                  <Label className="text-xs text-muted-foreground ml-9">Going to</Label>
+                  <Label className="text-xs text-muted-foreground ml-9">
+                    Going to
+                  </Label>
                   <div className="flex items-center relative">
                     <Plane className="absolute left-3 h-5 w-5 text-muted-foreground rotate-90 group-hover:text-primary transition-colors z-10" />
                     <Select onValueChange={field.onChange} value={field.value}>
@@ -258,27 +294,32 @@ export function FlightSearchForm({
                           <div className="flex flex-col items-start w-full">
                             <span className="text-xs text-muted-foreground flex items-center gap-2">
                               <CalendarIcon className="h-3 w-3" />
-                              {tripType === "round-trip" ? "Travel dates" : "Travel date"}
+                              {tripType === "round-trip"
+                                ? "Travel dates"
+                                : "Travel date"}
                             </span>
                             <span className="text-base font-semibold mt-1 truncate">
                               {tripType === "round-trip" ? (
                                 date?.from ? (
                                   date.to ? (
                                     <>
-                                      {format(date.from, "EEE, LLL d")} – {format(date.to, "EEE, LLL d")}
+                                      {format(date.from, "EEE, LLL d")} –{" "}
+                                      {format(date.to, "EEE, LLL d")}
                                     </>
                                   ) : (
                                     format(date.from, "EEE, LLL d, yyyy")
                                   )
                                 ) : (
-                                  <span className="text-muted-foreground">Select dates</span>
+                                  <span className="text-muted-foreground">
+                                    Select dates
+                                  </span>
                                 )
+                              ) : singleDate ? (
+                                format(singleDate, "EEE, LLL d")
                               ) : (
-                                singleDate ? (
-                                  format(singleDate, "EEE, LLL d")
-                                ) : (
-                                  <span className="text-muted-foreground">Select date</span>
-                                )
+                                <span className="text-muted-foreground">
+                                  Select date
+                                </span>
                               )}
                             </span>
                           </div>
@@ -295,18 +336,29 @@ export function FlightSearchForm({
                           onSelect={(val) => {
                             setDate(val);
                             if (val?.from) {
-                              form.setValue("departDate", format(val.from, "yyyy-MM-dd"), { shouldValidate: true });
+                              form.setValue(
+                                "departDate",
+                                format(val.from, "yyyy-MM-dd"),
+                                { shouldValidate: true }
+                              );
                             } else {
-                              form.setValue("departDate", "", { shouldValidate: true });
+                              form.setValue("departDate", "", {
+                                shouldValidate: true,
+                              });
                             }
                             if (val?.to) {
-                              form.setValue("returnDate", format(val.to, "yyyy-MM-dd"));
+                              form.setValue(
+                                "returnDate",
+                                format(val.to, "yyyy-MM-dd")
+                              );
                             } else {
                               form.setValue("returnDate", undefined);
                             }
                           }}
                           numberOfMonths={2}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           className="rounded-md"
                         />
                       ) : (
@@ -318,14 +370,22 @@ export function FlightSearchForm({
                           onSelect={(val) => {
                             setSingleDate(val);
                             if (val) {
-                              form.setValue("departDate", format(val, "yyyy-MM-dd"), { shouldValidate: true });
+                              form.setValue(
+                                "departDate",
+                                format(val, "yyyy-MM-dd"),
+                                { shouldValidate: true }
+                              );
                               form.setValue("returnDate", undefined); // Clear return date for one-way
                             } else {
-                              form.setValue("departDate", "", { shouldValidate: true });
+                              form.setValue("departDate", "", {
+                                shouldValidate: true,
+                              });
                             }
                           }}
                           numberOfMonths={2}
-                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          disabled={(date) =>
+                            date < new Date(new Date().setHours(0, 0, 0, 0))
+                          }
                           className="rounded-md"
                         />
                       )}
@@ -351,8 +411,10 @@ export function FlightSearchForm({
                         Travelers
                       </span>
                       <span className="text-base font-semibold mt-1">
-                        {form.watch("adults")} {form.watch("adults") === 1 ? "adult" : "adults"}
-                        {form.watch("children") > 0 && `, ${form.watch("children")} ${form.watch("children") === 1 ? "child" : "children"}`}
+                        {form.watch("adults")}{" "}
+                        {form.watch("adults") === 1 ? "adult" : "adults"}
+                        {form.watch("children") > 0 &&
+                          `, ${form.watch("children")} ${form.watch("children") === 1 ? "child" : "children"}`}
                       </span>
                     </div>
                   </Button>
@@ -371,30 +433,46 @@ export function FlightSearchForm({
                           variant="outline"
                           size="icon"
                           className="h-9 w-9 rounded-md"
-                          onClick={() => form.setValue("adults", Math.max(1, (form.getValues("adults") || 1) - 1))}
+                          onClick={() =>
+                            form.setValue(
+                              "adults",
+                              Math.max(1, (form.getValues("adults") || 1) - 1)
+                            )
+                          }
                           disabled={(form.watch("adults") || 1) <= 1}
                         >
                           <span className="text-lg">−</span>
                         </Button>
-                        <span className="w-6 text-center font-semibold text-lg">{form.watch("adults") || 1}</span>
+                        <span className="w-6 text-center font-semibold text-lg">
+                          {form.watch("adults") || 1}
+                        </span>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
                           className="h-9 w-9 rounded-md"
-                          onClick={() => form.setValue("adults", Math.min(9, (form.getValues("adults") || 1) + 1))}
+                          onClick={() =>
+                            form.setValue(
+                              "adults",
+                              Math.min(9, (form.getValues("adults") || 1) + 1)
+                            )
+                          }
                           disabled={(form.watch("adults") || 1) >= 9}
                         >
                           <span className="text-lg">+</span>
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Children */}
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-base font-medium">Children</Label>
-                        <p className="text-sm text-muted-foreground">Age 0–17</p>
+                        <Label className="text-base font-medium">
+                          Children
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Age 0–17
+                        </p>
                       </div>
                       <div className="flex items-center gap-3">
                         <Button
@@ -402,30 +480,48 @@ export function FlightSearchForm({
                           variant="outline"
                           size="icon"
                           className="h-9 w-9 rounded-md"
-                          onClick={() => form.setValue("children", Math.max(0, (form.getValues("children") || 0) - 1))}
+                          onClick={() =>
+                            form.setValue(
+                              "children",
+                              Math.max(0, (form.getValues("children") || 0) - 1)
+                            )
+                          }
                           disabled={(form.watch("children") || 0) <= 0}
                         >
                           <span className="text-lg">−</span>
                         </Button>
-                        <span className="w-6 text-center font-semibold text-lg">{form.watch("children") || 0}</span>
+                        <span className="w-6 text-center font-semibold text-lg">
+                          {form.watch("children") || 0}
+                        </span>
                         <Button
                           type="button"
                           variant="outline"
                           size="icon"
                           className="h-9 w-9 rounded-md"
-                          onClick={() => form.setValue("children", Math.min(8, (form.getValues("children") || 0) + 1))}
+                          onClick={() =>
+                            form.setValue(
+                              "children",
+                              Math.min(8, (form.getValues("children") || 0) + 1)
+                            )
+                          }
                           disabled={(form.watch("children") || 0) >= 8}
                         >
                           <span className="text-lg">+</span>
                         </Button>
                       </div>
                     </div>
-                    
+
                     {/* Summary */}
                     <div className="pt-4 border-t">
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">
-                          {(form.watch("adults") || 1) + (form.watch("children") || 0)} {((form.watch("adults") || 1) + (form.watch("children") || 0)) === 1 ? "traveler" : "travelers"}
+                          {(form.watch("adults") || 1) +
+                            (form.watch("children") || 0)}{" "}
+                          {(form.watch("adults") || 1) +
+                            (form.watch("children") || 0) ===
+                          1
+                            ? "traveler"
+                            : "travelers"}
                         </span>
                         <Button
                           type="button"

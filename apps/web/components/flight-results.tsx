@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plane, Clock, ArrowRight } from "lucide-react";
-import type { FlightResult } from "@/lib/schemas";
+import type { FlightResult } from "@/lib/schema/flights";
 import { formatTime, formatDuration, formatPrice } from "@/lib/utils";
 
 interface FlightResultsProps {
@@ -104,8 +104,13 @@ export function FlightResults({ flights }: FlightResultsProps) {
                   {flight.layovers && flight.layovers.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {flight.layovers.map((layover, idx) => (
-                        <Badge key={idx} variant="secondary" className="text-xs">
-                          Layover: {layover.airport} ({formatDuration(layover.duration)})
+                        <Badge
+                          key={idx}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          Layover: {layover.airport} (
+                          {formatDuration(layover.duration)})
                         </Badge>
                       ))}
                     </div>
