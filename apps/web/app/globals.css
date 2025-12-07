@@ -1,50 +1,130 @@
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 222.2222 47.3684% 11.1765%;
+    --foreground: 216 12.1951% 83.9216%;
+    --card: 217.2414 32.5843% 17.451%;
+    --card-foreground: 216 12.1951% 83.9216%;
+    --popover: 217.2414 32.5843% 17.451%;
+    --popover-foreground: 216 12.1951% 83.9216%;
+    --primary: 158.1132 64.3725% 51.5686%;
+    --primary-foreground: 222.2222 47.3684% 11.1765%;
+    --secondary: 217.7778 23.0769% 22.9412%;
+    --secondary-foreground: 240 5.0279% 64.902%;
+    --muted: 217.1429 29.5775% 13.9216%;
+    --muted-foreground: 220 8.9362% 46.0784%;
+    --accent: 216.9231 19.1176% 26.6667%;
+    --accent-foreground: 240 5.0279% 64.902%;
+    --destructive: 0 84.2365% 60.1961%;
+    --destructive-foreground: 222.2222 47.3684% 11.1765%;
+    --border: 215 13.7931% 34.1176%;
+    --input: 215 13.7931% 34.1176%;
+    --ring: 158.1132 64.3725% 51.5686%;
+    --chart-1: 158.1132 64.3725% 51.5686%;
+    --chart-2: 172.4551 66.0079% 50.3922%;
+    --chart-3: 142.0859 70.5628% 45.2941%;
+    --chart-4: 160.1183 84.0796% 39.4118%;
+    --chart-5: 161.3793 93.5484% 30.3922%;
+    --sidebar: 217.2414 32.5843% 17.451%;
+    --sidebar-foreground: 216 12.1951% 83.9216%;
+    --sidebar-primary: 158.1132 64.3725% 51.5686%;
+    --sidebar-primary-foreground: 222.2222 47.3684% 11.1765%;
+    --sidebar-accent: 216.9231 19.1176% 26.6667%;
+    --sidebar-accent-foreground: 240 5.0279% 64.902%;
+    --sidebar-border: 215 13.7931% 34.1176%;
+    --sidebar-ring: 158.1132 64.3725% 51.5686%;
+    --font-sans: DM Sans, sans-serif;
+    --font-serif: Lora, serif;
+    --font-mono: IBM Plex Mono, monospace;
+    --radius: 0.5rem;
+    --shadow-x: 0px;
+    --shadow-y: 4px;
+    --shadow-blur: 8px;
+    --shadow-spread: -1px;
+    --shadow-opacity: 0.1;
+    --shadow-color: hsl(0 0% 0%);
+    --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+    --shadow-sm:
+      0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+    --shadow:
+      0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 1px 2px -2px hsl(0 0% 0% / 0.1);
+    --shadow-md:
+      0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-lg:
+      0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 4px 6px -2px hsl(0 0% 0% / 0.1);
+    --shadow-xl:
+      0px 4px 8px -1px hsl(0 0% 0% / 0.1), 0px 8px 10px -2px hsl(0 0% 0% / 0.1);
+    --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+    --radius: 0.5rem;
   }
 }
 
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.imgDark {
-  display: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+@layer base {
+  * {
+    @apply border-border;
   }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+  }
+}
 
-  .imgLight {
-    display: none;
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
-  .imgDark {
-    display: unset;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Animations */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }

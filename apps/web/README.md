@@ -1,24 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+This is a [Next.js](https://nextjs.org) project featuring **AI-Powered Flight Search Automation** using Playwright and Gemini Vision API.
+
+## Features
+
+🤖 **Intelligent Flight Search Automation**
+- Automated browser interaction with Playwright
+- AI-powered data extraction using Gemini 2.0 Flash (Vision)
+- Screenshot-based extraction (no fragile CSS selectors!)
+- Supports booking.com and can be extended to other sites
 
 ## Getting Started
 
-First, run the development server:
+### 1. Environment Setup
+
+Create a `.env.local` file in the `apps/web` directory:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+GOOGLE_GENERATIVE_AI_API_KEY=your_api_key_here
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Get your Gemini API key from: [Google AI Studio](https://makersuite.google.com/app/apikey)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Installation
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load Inter, a custom Google Font.
+Install Playwright browsers (required for automation):
+
+```bash
+pnpm exec playwright install chromium
+```
+
+### 3. Run Development Server
+
+```bash
+pnpm dev
+# or
+npm run dev
+```
+
+Open [http://localhost:3000/flights](http://localhost:3000/flights) to access the flight search interface.
+
+## Flight Search API
+
+### Endpoint: `/api/search-flights`
+
+**Request Body:**
+```json
+{
+  "from": "BLR",
+  "to": "CCU", 
+  "departDate": "2025-12-25",
+  "returnDate": "2025-12-30", // optional
+  "passengers": 1,
+  "tripType": "round-trip", // or "one-way"
+  "travelClass": "economy",
+  "directFlights": false
+}
+```
+
+**Response:**
+```json
+{
+  "flights": [
+    {
+      "id": "ai-flight-1",
+      "airline": "IndiGo",
+      "flightNumber": "6E2345",
+      "departure": {
+        "airport": "BLR",
+        "time": "10:30",
+        "date": "2025-12-25"
+      },
+      "arrival": {
+        "airport": "CCU",
+        "time": "13:15",
+        "date": "2025-12-25"
+      },
+      "duration": 165,
+      "stops": 0,
+      "price": 4500
+    }
+  ],
+  "extractedWith": "gemini-vision"
+}
+```
+
+## System Architecture
+
+```
+User Input (Frontend) 
+  → API Route (/api/search-flights)
+  → Playwright Browser Automation
+  → Screenshot Capture
+  → Gemini Vision API (AI Extraction)
+  → Structured JSON Response
+```
+
+### How It Works
+
+1. **Browser Launch**: Playwright launches a headless Chrome browser
+2. **Navigation**: Goes to booking.com flights page
+3. **Form Filling**: Intelligently fills search forms with retry logic
+4. **Search Submission**: Submits the search and waits for results
+5. **Screenshot Analysis**: Takes screenshot of results page
+6. **AI Extraction**: Gemini Vision API extracts flight data from screenshot
+7. **Response**: Returns structured JSON with flight details
+
+### Why Vision API?
+
+Traditional web scraping breaks when websites change their HTML/CSS. Using Gemini's vision capabilities makes the automation **robust and adaptive** - it can understand flight data visually, just like a human would!
 
 ## Learn More
 
