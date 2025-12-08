@@ -28,8 +28,8 @@ const automations = [
     icon: Plane,
     href: "/flights",
     available: true,
-    gradient: "from-blue-500/20 to-cyan-500/20",
-    iconBg: "bg-blue-500/20",
+    borderColor: "border-blue-500",
+    iconBg: "bg-blue-500/10",
     iconColor: "text-blue-400",
     features: ["Multi-city search", "Price comparison", "Date flexibility"],
   },
@@ -40,9 +40,9 @@ const automations = [
     icon: Car,
     href: "/uber",
     available: true,
-    gradient: "from-emerald-500/20 to-teal-500/20",
-    iconBg: "bg-emerald-500/20",
-    iconColor: "text-emerald-400",
+    borderColor: "border-primary",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
     features: ["Live pricing", "Multiple ride options", "ETA estimates"],
   },
 ];
@@ -57,20 +57,13 @@ const techStack = [
 export default function Home() {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Animated background gradients */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-radial from-primary/10 via-transparent to-transparent blur-3xl animate-pulse" />
-        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-radial from-blue-500/10 via-transparent to-transparent blur-3xl animate-pulse delay-1000" />
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      </div>
-
-      {/* Grid pattern overlay */}
+      {/* Subtle background pattern */}
       <div
-        className="absolute inset-0 opacity-[0.02] pointer-events-none"
+        className="absolute inset-0 opacity-[0.015] pointer-events-none"
         style={{
           backgroundImage: `linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px),
                             linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)`,
-          backgroundSize: "80px 80px",
+          backgroundSize: "60px 60px",
         }}
       />
 
@@ -78,8 +71,8 @@ export default function Home() {
         {/* Hero Section */}
         <div className="text-center mb-20 animate-slide-up">
           {/* AI Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
-            <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary mb-8">
+            <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-primary">
               Powered by AI
             </span>
@@ -87,13 +80,9 @@ export default function Home() {
 
           {/* Main Title */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6">
-            <span className="bg-gradient-to-r from-foreground via-foreground to-muted-foreground bg-clip-text text-transparent">
-              Browser
-            </span>
+            <span className="text-foreground">Browser</span>
             <br />
-            <span className="bg-gradient-to-r from-primary via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              Automation
-            </span>
+            <span className="text-primary">Automation</span>
           </h1>
 
           {/* Subtitle */}
@@ -105,7 +94,7 @@ export default function Home() {
 
         {/* Automation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-20">
-          {automations.map((automation, index) => {
+          {automations.map((automation) => {
             const Icon = automation.icon;
 
             return (
@@ -113,37 +102,32 @@ export default function Home() {
                 key={automation.id}
                 href={automation.href}
                 className="group"
-                style={{ animationDelay: `${index * 100}ms` }}
               >
                 <Card
                   className={`
-                  relative h-full overflow-hidden
-                  bg-gradient-to-br ${automation.gradient}
-                  border-border/50 hover:border-primary/50
-                  transition-all duration-500 ease-out
-                  hover:shadow-2xl hover:shadow-primary/10
-                  hover:-translate-y-1
+                  h-full
+                  border-2 ${automation.borderColor}
+                  bg-card
+                  transition-all duration-300
+                  hover:shadow-lg
+                  hover:-translate-y-0.5
                 `}
                 >
-                  {/* Glow effect on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:to-transparent transition-all duration-500" />
-
-                  <CardHeader className="relative space-y-4 pb-4">
+                  <CardHeader className="space-y-4 pb-4">
                     {/* Icon */}
                     <div
                       className={`
-                      w-14 h-14 rounded-2xl ${automation.iconBg}
+                      w-12 h-12 rounded-xl ${automation.iconBg}
                       flex items-center justify-center
-                      group-hover:scale-110 transition-transform duration-300
-                      border border-white/5
+                      border border-border
                     `}
                     >
-                      <Icon className={`h-7 w-7 ${automation.iconColor}`} />
+                      <Icon className={`h-6 w-6 ${automation.iconColor}`} />
                     </div>
 
                     {/* Title & Description */}
                     <div>
-                      <CardTitle className="text-xl md:text-2xl text-foreground group-hover:text-primary transition-colors duration-300 mb-2">
+                      <CardTitle className="text-xl md:text-2xl text-foreground group-hover:text-primary transition-colors duration-200 mb-2">
                         {automation.title}
                       </CardTitle>
                       <CardDescription className="text-base text-muted-foreground leading-relaxed">
@@ -152,14 +136,14 @@ export default function Home() {
                     </div>
                   </CardHeader>
 
-                  <CardContent className="relative pt-0">
+                  <CardContent className="pt-0">
                     {/* Feature tags */}
                     <div className="flex flex-wrap gap-2 mb-6">
                       {automation.features.map((feature) => (
                         <Badge
                           key={feature}
-                          variant="secondary"
-                          className="bg-muted/50 text-muted-foreground border-0 text-xs"
+                          variant="outline"
+                          className="text-muted-foreground border-border text-xs"
                         >
                           {feature}
                         </Badge>
@@ -167,10 +151,8 @@ export default function Home() {
                     </div>
 
                     {/* CTA */}
-                    <div className="flex items-center gap-2 text-primary font-medium group/cta">
-                      <span className="group-hover/cta:underline">
-                        Start Automation
-                      </span>
+                    <div className="flex items-center gap-2 text-primary font-medium">
+                      <span>Start Automation</span>
                       <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform duration-200" />
                     </div>
                   </CardContent>
@@ -203,9 +185,9 @@ export default function Home() {
             ].map((item, i) => (
               <div
                 key={item.step}
-                className="relative p-6 rounded-2xl bg-card/50 border border-border/50"
+                className="relative p-6 rounded-xl bg-card border-2 border-border"
               >
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-4">
                   <span className="text-primary font-bold">{item.step}</span>
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">
@@ -221,7 +203,7 @@ export default function Home() {
         </div>
 
         {/* Tech Stack Footer */}
-        <div className="border-t border-border/50 pt-10">
+        <div className="border-t-2 border-border pt-10">
           <div className="flex flex-col items-center gap-4">
             <p className="text-sm text-muted-foreground mb-2">Built with</p>
             <div className="flex flex-wrap justify-center gap-3">
@@ -230,7 +212,7 @@ export default function Home() {
                 return (
                   <div
                     key={tech.name}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border/50 text-sm text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary transition-colors"
                   >
                     <TechIcon className="h-4 w-4" />
                     <span>{tech.name}</span>

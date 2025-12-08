@@ -438,7 +438,7 @@ export default function UberPage() {
                         {result.rides.map((ride, index) => (
                           <div
                             key={index}
-                            className="p-4 rounded-xl border bg-gradient-to-r from-background to-muted/30 hover:shadow-md transition-all"
+                            className="p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all"
                           >
                             <div className="flex flex-col md:flex-row md:items-center gap-4">
                               {/* Ride Info */}
@@ -491,7 +491,7 @@ export default function UberPage() {
             )}
 
             {/* Info Banner - Outside form */}
-            <div className="w-full max-w-4xl mx-auto p-4 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="w-full max-w-4xl mx-auto p-4 rounded-xl border-2 border-primary bg-card">
               <div className="flex items-start gap-3">
                 <Bot className="h-5 w-5 text-primary mt-0.5" />
                 <div>

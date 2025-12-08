@@ -726,7 +726,7 @@ export default function AutoPage() {
             {result && (
               <div className="max-w-4xl mx-auto my-6 space-y-6 animate-in slide-in-from-bottom-4">
                 {result.flights && result.flights.length > 0 && (
-                  <Card className="border-primary/30 shadow-lg">
+                  <Card className="border-2 border-primary">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <Plane className="h-5 w-5 text-primary" />
@@ -747,7 +747,7 @@ export default function AutoPage() {
                         {result.flights.map((flight, index) => (
                           <div
                             key={index}
-                            className="p-4 rounded-xl border bg-gradient-to-r from-background to-muted/30 hover:shadow-md transition-all"
+                            className="p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all"
                           >
                             <div className="flex flex-col md:flex-row md:items-center gap-4">
                               {/* Flight Times & Route */}
@@ -842,7 +842,7 @@ export default function AutoPage() {
             )}
 
             {/* Info Banner - Outside form, inside Form provider */}
-            <div className="w-full max-w-4xl mx-auto mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="w-full max-w-4xl mx-auto mt-6 p-4 rounded-xl border-2 border-primary bg-card">
               <div className="flex items-start gap-3">
                 <Bot className="h-5 w-5 text-primary mt-0.5" />
                 <div>
