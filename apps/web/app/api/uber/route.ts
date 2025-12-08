@@ -72,35 +72,12 @@ const rideOptionsSchema = z.object({
     .describe("Total number of ride options shown"),
 });
 
-// Ensure screenshots directory exists
-function ensureScreenshotDir() {
-  const screenshotDir = path.join(process.cwd(), "public", "screenshots");
-  if (!fs.existsSync(screenshotDir)) {
-    fs.mkdirSync(screenshotDir, { recursive: true });
-  }
-  return screenshotDir;
-}
-
-// Save screenshot to public/screenshots
-async function saveScreenshot(page: Page, name: string): Promise<string> {
-  const screenshotDir = ensureScreenshotDir();
-  const timestamp = Date.now();
-  const filename = `uber_${name}_${timestamp}.png`;
-  const filepath = path.join(screenshotDir, filename);
-
-  await page.screenshot({ path: filepath, fullPage: false });
-
-  // Return the public URL path
-  return `/screenshots/${filename}`;
-}
-
 export async function POST(request: NextRequest) {
   let browser;
   const steps: Array<{
     step: number;
     action: string;
     result: string;
-    screenshotUrl?: string;
     timestamp: string;
   }> = [];
 
@@ -165,18 +142,16 @@ export async function POST(request: NextRequest) {
     });
 
     // ==================
-    // STEP 2: Take Initial Screenshot and Check Auth
+    // STEP 2: Capture Screenshot for Auth Check
     // ==================
-    console.log("📸 Step 2: Taking initial screenshot and checking auth...");
-    const screenshot1Url = await saveScreenshot(page, "01-initial-page");
+    console.log("📸 Step 2: Capturing screenshot for auth check...");
     const screenshot1 = await page.screenshot({ fullPage: false, type: "png" });
     const base64Screenshot1 = screenshot1.toString("base64");
 
     steps.push({
       step: 2,
-      action: "Take initial screenshot",
-      result: "✅ Screenshot captured",
-      screenshotUrl: screenshot1Url,
+      action: "Capture page for auth check",
+      result: "✅ Screenshot captured for AI analysis",
       timestamp: new Date().toISOString(),
     });
 
@@ -546,18 +521,16 @@ Tell me:
     await randomDelay(2000, 3000);
 
     // ==================
-    // STEP 7: Take Results Screenshot
+    // STEP 7: Capture Results for AI Analysis
     // ==================
-    console.log("📸 Step 7: Taking results screenshot...");
-    const screenshot2Url = await saveScreenshot(page, "02-results-page");
+    console.log("📸 Step 7: Capturing results for AI analysis...");
     const screenshot2 = await page.screenshot({ fullPage: false, type: "png" });
     const base64Screenshot2 = screenshot2.toString("base64");
 
     steps.push({
       step: 7,
-      action: "Take results screenshot",
-      result: "✅ Screenshot captured",
-      screenshotUrl: screenshot2Url,
+      action: "Capture results for AI",
+      result: "✅ Results captured for AI analysis",
       timestamp: new Date().toISOString(),
     });
 
