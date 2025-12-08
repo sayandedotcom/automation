@@ -3,6 +3,26 @@ import { launchBrowser, setupStealthMode } from "@/lib/playwright-utils";
 
 export const maxDuration = 120; // Allow more time for manual login
 
+// Configuration constants
+const AUTH_CONFIG = {
+  maxWaitTime: 180000, // 3 minutes for login
+  checkInterval: 2000, // Check every 2 seconds
+  initialLoadDelay: 3000, // Wait for page to stabilize
+  navigationTimeout: 60000, // 60 seconds for slow connections
+  viewport: { width: 1280, height: 800 },
+} as const;
+
+// Selectors for detecting authenticated state
+const AUTH_SELECTORS = {
+  activityButton: 'text="Activity"',
+  accountButton:
+    '[aria-label*="Account" i], [aria-label*="Profile" i], [data-testid*="account"]',
+  rideTab: 'a[href*="/go/ride"], button:has-text("Ride")',
+  pickupInput: '[data-testid="pickup-input"], input[placeholder*="Pickup" i]',
+  loginButtons:
+    'button:has-text("Log in"), button:has-text("Sign up"), a:has-text("Log in"), a:has-text("Sign up"), button:has-text("Continue")',
+} as const;
+
 // GET: Simple endpoint - auth checking is now done on client via localStorage
 export async function GET() {
   return NextResponse.json({
@@ -32,7 +52,7 @@ export async function POST(request: NextRequest) {
     // Launch browser in HEADED mode so user can login
     browser = await launchBrowser({ headless: false });
     const context = await browser.newContext({
-      viewport: { width: 1280, height: 800 },
+      viewport: AUTH_CONFIG.viewport,
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     });
@@ -45,7 +65,7 @@ export async function POST(request: NextRequest) {
     try {
       await page.goto("https://auth.uber.com/", {
         waitUntil: "domcontentloaded",
-        timeout: 60000, // 60 seconds for slow connections
+        timeout: AUTH_CONFIG.navigationTimeout,
       });
     } catch (navError) {
       console.log("⚠️ Initial navigation slow, waiting for page...");
@@ -54,7 +74,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Wait for page to stabilize
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, AUTH_CONFIG.initialLoadDelay)
+    );
     console.log("✅ Page loaded, waiting for user to login...");
 
     // Wait for user to login (max 3 minutes)
@@ -63,8 +85,7 @@ export async function POST(request: NextRequest) {
 
     let isAuthenticated = false;
     let browserClosedByUser = false;
-    const maxWaitTime = 180000; // 3 minutes
-    const checkInterval = 2000; // Check every 2 seconds
+    const { maxWaitTime, checkInterval } = AUTH_CONFIG;
     let waitedTime = 0;
 
     // Set up instant browser close detection using event listener
@@ -74,7 +95,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Wait for initial page to fully render
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    await new Promise((resolve) =>
+      setTimeout(resolve, AUTH_CONFIG.initialLoadDelay)
+    );
 
     while (
       waitedTime < maxWaitTime &&
@@ -105,26 +128,24 @@ export async function POST(request: NextRequest) {
 
       // Look for POSITIVE indicators of being logged in
       const activityButtonVisible = await page
-        .locator('text="Activity"')
+        .locator(AUTH_SELECTORS.activityButton)
         .isVisible()
         .catch(() => false);
 
       const accountButtonVisible = await page
-        .locator(
-          '[aria-label*="Account" i], [aria-label*="Profile" i], [data-testid*="account"]'
-        )
+        .locator(AUTH_SELECTORS.accountButton)
         .first()
         .isVisible()
         .catch(() => false);
 
       const rideTabVisible = await page
-        .locator('a[href*="/go/ride"], button:has-text("Ride")')
+        .locator(AUTH_SELECTORS.rideTab)
         .first()
         .isVisible()
         .catch(() => false);
 
       const pickupInputVisible = await page
-        .locator('[data-testid="pickup-input"], input[placeholder*="Pickup" i]')
+        .locator(AUTH_SELECTORS.pickupInput)
         .first()
         .isVisible()
         .catch(() => false);
@@ -143,9 +164,7 @@ export async function POST(request: NextRequest) {
 
       if (hasPositiveAuthProof) {
         const loginButtonVisible = await page
-          .locator(
-            'button:has-text("Log in"), button:has-text("Sign up"), a:has-text("Log in"), a:has-text("Sign up"), button:has-text("Continue")'
-          )
+          .locator(AUTH_SELECTORS.loginButtons)
           .first()
           .isVisible()
           .catch(() => false);
