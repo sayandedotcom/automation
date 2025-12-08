@@ -34,7 +34,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { uberSearchSchema, type UberSearchInput } from "@/lib/schema/uber";
-import { AutomationResult } from "@/interfaces/uber";
+import { AutomationResult } from "@/lib/types/uber";
 import {
   PageHeader,
   AutomationSteps,

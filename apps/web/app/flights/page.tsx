@@ -54,7 +54,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AIRPORTS } from "@/config/airports";
-import { AutomationResult, FlightDetails } from "@/interfaces/flights";
+import { AutomationResult, FlightDetails } from "@/lib/types/flights";
 import {
   PageHeader,
   AutomationSteps,
