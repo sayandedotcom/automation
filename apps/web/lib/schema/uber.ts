@@ -37,6 +37,15 @@ export const rideResultsSchema = z.object({
   dropoff: z.string().optional().describe("Detected dropoff location"),
 });
 
+// Schema for ride options extraction (API response)
+export const rideOptionsSchema = z.object({
+  rides: z.array(rideOptionSchema).describe("List of available ride options"),
+  totalOptions: z
+    .number()
+    .optional()
+    .describe("Total number of ride options shown"),
+});
+
 // Schema for page analysis
 export const uberPageAnalysisSchema = z.object({
   isLoggedIn: z.boolean().describe("Whether the user is logged in to Uber"),

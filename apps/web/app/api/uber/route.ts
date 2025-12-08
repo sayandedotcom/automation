@@ -4,55 +4,18 @@ import {
   setupStealthMode,
   randomDelay,
 } from "@/lib/playwright-utils";
-import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
-import { z } from "zod";
+import { rideOptionsSchema } from "@/lib/schema/uber";
+import { visionModel } from "@/lib/ai";
+import {
+  createStep,
+  fillPickupLocation,
+  fillDropoffLocation,
+  clickSearchButton,
+  waitForRideResults,
+} from "@/lib/automation/uber";
 
 export const maxDuration = 60;
-
-// Gemini vision model for screenshot analysis
-const visionModel = google("gemini-2.0-flash", {
-  safetySettings: [
-    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-  ],
-});
-
-// Schema for ride options extraction
-const rideOptionsSchema = z.object({
-  rides: z
-    .array(
-      z.object({
-        name: z
-          .string()
-          .describe(
-            "Name of the ride type (e.g., 'Uber Go', 'Go Non AC', 'Bike', 'UberXL')"
-          ),
-        description: z
-          .string()
-          .optional()
-          .describe(
-            "Description of the ride (e.g., 'Affordable, compact AC rides')"
-          ),
-        fare: z.string().describe("Price/fare of the ride (e.g., '₹525.88')"),
-        eta: z
-          .string()
-          .optional()
-          .describe("Estimated time of arrival (e.g., '2 min away')"),
-        capacity: z
-          .string()
-          .optional()
-          .describe("Capacity of vehicle (e.g., '4 seats')"),
-      })
-    )
-    .describe("List of available ride options"),
-  totalOptions: z
-    .number()
-    .optional()
-    .describe("Total number of ride options shown"),
-});
 
 export async function POST(request: NextRequest) {
   let browser;
@@ -80,7 +43,6 @@ export async function POST(request: NextRequest) {
     browser = await launchBrowser({ headless });
 
     // Create context with auth state from client (localStorage)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contextOptions: {
       viewport: { width: number; height: number };
       userAgent: string;
@@ -113,7 +75,6 @@ export async function POST(request: NextRequest) {
     }
 
     const context = await browser.newContext(contextOptions);
-
     const page = await context.newPage();
     await setupStealthMode(page);
 
@@ -130,300 +91,76 @@ export async function POST(request: NextRequest) {
     });
     await randomDelay(2000, 3000);
 
-    steps.push({
-      step: 1,
-      action: "Load Uber website",
-      result: "✅ Page loaded successfully",
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(1, "Load Uber website", "✅ Page loaded successfully")
+    );
 
     // ==================
-    // STEP 2: Fill in Pickup Location (FIRST input)
+    // STEP 2: Fill in Pickup Location
     // ==================
-    console.log(`📍 Step 2: Filling pickup location: ${pickup}...`);
+    const pickupFilled = await fillPickupLocation(page, pickup);
 
-    let pickupFilled = false;
-
-    // Click on the FIRST input or pickup field
-    try {
-      // Try finding all text inputs and click the first one
-      const allInputs = page.locator(
-        'input[type="text"], input[role="combobox"]'
-      );
-      const inputCount = await allInputs.count();
-      console.log(`   Found ${inputCount} text inputs on page`);
-
-      if (inputCount >= 1) {
-        const firstInput = allInputs.nth(0);
-        await firstInput.click({ timeout: 3000 });
-        await randomDelay(300, 500);
-        console.log("   ✅ Clicked first input (pickup)");
-
-        // Fill the pickup location
-        await firstInput.fill(pickup);
-        console.log(`   ✅ Filled pickup: "${pickup}"`);
-        await randomDelay(1500, 2000);
-
-        // Select first suggestion
-        console.log("   ⏳ Waiting for suggestions...");
-        const suggestionSelectors = [
-          '[data-testid*="suggestion"]',
-          '[role="option"]',
-          'ul[role="listbox"] li',
-          "ul li",
-        ];
-
-        for (const sugSelector of suggestionSelectors) {
-          try {
-            const suggestion = page.locator(sugSelector).first();
-            if (await suggestion.isVisible({ timeout: 2000 })) {
-              await suggestion.click({ timeout: 2000 });
-              pickupFilled = true;
-              console.log("   ✅ Selected pickup suggestion");
-              break;
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-
-        // Fallback: keyboard
-        if (!pickupFilled) {
-          await page.keyboard.press("ArrowDown");
-          await randomDelay(200, 300);
-          await page.keyboard.press("Enter");
-          pickupFilled = true;
-          console.log("   ✅ Selected pickup via keyboard");
-        }
-      }
-    } catch (e) {
-      console.log("   ❌ Error filling pickup:", e);
-    }
-
-    steps.push({
-      step: 2,
-      action: `Fill pickup location: ${pickup}`,
-      result: pickupFilled
-        ? `✅ Pickup location set to "${pickup}"`
-        : `⚠️ Could not fill pickup location`,
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(
+        2,
+        `Fill pickup location: ${pickup}`,
+        pickupFilled
+          ? `✅ Pickup location set to "${pickup}"`
+          : `⚠️ Could not fill pickup location`
+      )
+    );
 
     await randomDelay(1500, 2000);
 
     // ==================
-    // STEP 3: Fill in Dropoff Location (SECOND input)
+    // STEP 3: Fill in Dropoff Location
     // ==================
-    console.log(`📍 Step 3: Filling dropoff location: ${dropoff}...`);
+    const dropoffFilled = await fillDropoffLocation(page, dropoff);
 
-    let dropoffFilled = false;
-
-    try {
-      // After pickup is selected, there should be a second input for dropoff
-      // Click on the SECOND input
-      const allInputs = page.locator(
-        'input[type="text"], input[role="combobox"]'
-      );
-      const inputCount = await allInputs.count();
-      console.log(`   Found ${inputCount} text inputs on page`);
-
-      if (inputCount >= 2) {
-        // Use the second input for dropoff
-        const secondInput = allInputs.nth(1);
-        await secondInput.click({ timeout: 3000 });
-        await randomDelay(300, 500);
-        console.log("   ✅ Clicked second input (dropoff)");
-
-        // Fill the dropoff location
-        await secondInput.fill(dropoff);
-        console.log(`   ✅ Filled dropoff: "${dropoff}"`);
-        await randomDelay(1500, 2000);
-
-        // Select first suggestion
-        console.log("   ⏳ Waiting for suggestions...");
-        const suggestionSelectors = [
-          '[data-testid*="suggestion"]',
-          '[role="option"]',
-          'ul[role="listbox"] li',
-          "ul li",
-        ];
-
-        for (const sugSelector of suggestionSelectors) {
-          try {
-            const suggestion = page.locator(sugSelector).first();
-            if (await suggestion.isVisible({ timeout: 2000 })) {
-              await suggestion.click({ timeout: 2000 });
-              dropoffFilled = true;
-              console.log("   ✅ Selected dropoff suggestion");
-              break;
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-
-        // Fallback: keyboard
-        if (!dropoffFilled) {
-          await page.keyboard.press("ArrowDown");
-          await randomDelay(200, 300);
-          await page.keyboard.press("Enter");
-          dropoffFilled = true;
-          console.log("   ✅ Selected dropoff via keyboard");
-        }
-      } else if (inputCount === 1) {
-        // Maybe only one input visible - try clicking on dropoff label first
-        console.log("   Only 1 input found, trying to find dropoff field...");
-
-        const dropoffLabels = [
-          'text="Dropoff location"',
-          'text="Where to?"',
-          '[placeholder*="Dropoff" i]',
-          '[placeholder*="Where" i]',
-        ];
-
-        for (const labelSelector of dropoffLabels) {
-          try {
-            const label = page.locator(labelSelector).first();
-            if (await label.isVisible({ timeout: 1000 })) {
-              await label.click({ timeout: 2000 });
-              await randomDelay(500, 800);
-              console.log("   ✅ Clicked dropoff label");
-
-              // Now find the active input and fill
-              const activeInput = page
-                .locator('input:focus, input[type="text"]')
-                .first();
-              await activeInput.fill(dropoff);
-              console.log(`   ✅ Filled dropoff: "${dropoff}"`);
-              await randomDelay(1500, 2000);
-
-              await page.keyboard.press("ArrowDown");
-              await randomDelay(200, 300);
-              await page.keyboard.press("Enter");
-              dropoffFilled = true;
-              break;
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-      }
-    } catch (e) {
-      console.log("   ❌ Error filling dropoff:", e);
-    }
-
-    // Last fallback
-    if (!dropoffFilled) {
-      console.log("   🔄 Last fallback: keyboard.type()");
-      await page.keyboard.type(dropoff, { delay: 50 });
-      await randomDelay(1500, 2000);
-      await page.keyboard.press("ArrowDown");
-      await randomDelay(200, 300);
-      await page.keyboard.press("Enter");
-      dropoffFilled = true;
-    }
-
-    steps.push({
-      step: 3,
-      action: `Fill dropoff location: ${dropoff}`,
-      result: dropoffFilled
-        ? `✅ Dropoff location set to "${dropoff}"`
-        : `⚠️ Could not fill dropoff location`,
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(
+        3,
+        `Fill dropoff location: ${dropoff}`,
+        dropoffFilled
+          ? `✅ Dropoff location set to "${dropoff}"`
+          : `⚠️ Could not fill dropoff location`
+      )
+    );
 
     await randomDelay(1500, 2000);
 
     // ==================
     // STEP 4: Click Save/Search Button
     // ==================
-    console.log("🔍 Step 4: Clicking Save/Search button...");
+    const searchClicked = await clickSearchButton(page);
 
-    let searchClicked = false;
-
-    // Uber uses "Save" button after selecting both locations
-    const searchButtonSelectors = [
-      'button:has-text("Save")',
-      'button:has-text("Confirm")',
-      'button:has-text("Done")',
-      'button:has-text("Search")',
-      'button:has-text("See prices")',
-      'button:has-text("Request")',
-      'button[type="submit"]',
-      '[data-testid*="confirm"]',
-      '[data-testid*="save"]',
-    ];
-
-    for (const selector of searchButtonSelectors) {
-      try {
-        console.log(`   Trying selector: ${selector}`);
-        const element = page.locator(selector).first();
-
-        if (await element.isVisible({ timeout: 2000 })) {
-          await element.click({ timeout: 3000 });
-          await randomDelay(500, 1000);
-          searchClicked = true;
-          console.log(`   ✅ Clicked button: ${selector}`);
-          break;
-        }
-      } catch (e) {
-        continue;
-      }
-    }
-
-    // Fallback: Try to find any visible primary button
-    if (!searchClicked) {
-      console.log("   🔄 Trying to find primary button...");
-      try {
-        const primaryBtn = page
-          .locator('button[class*="primary" i], button[class*="submit" i]')
-          .first();
-        if (await primaryBtn.isVisible({ timeout: 2000 })) {
-          await primaryBtn.click({ timeout: 3000 });
-          searchClicked = true;
-          console.log("   ✅ Clicked primary button");
-        }
-      } catch (e) {
-        // Try Enter key
-        console.log("   🔄 Trying Enter key...");
-        await page.keyboard.press("Enter");
-        searchClicked = true;
-      }
-    }
-
-    steps.push({
-      step: 4,
-      action: "Click Save/Search button",
-      result: searchClicked
-        ? "✅ Search initiated"
-        : "⚠️ Could not click search button",
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(
+        4,
+        "Click Save/Search button",
+        searchClicked
+          ? "✅ Search initiated"
+          : "⚠️ Could not click search button"
+      )
+    );
 
     // Wait for results to load
-    console.log("   ⏳ Waiting for ride options to load...");
-    await randomDelay(4000, 6000);
-
-    // Additional wait if page is still loading
-    await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {
-      console.log("   ℹ️ Network idle timeout, continuing anyway");
-    });
-
-    await randomDelay(2000, 3000);
+    await waitForRideResults(page);
 
     // ==================
     // STEP 5: Capture Results for AI Analysis
     // ==================
     console.log("📸 Step 5: Capturing results for AI analysis...");
-    const screenshot2 = await page.screenshot({ fullPage: false, type: "png" });
-    const base64Screenshot2 = screenshot2.toString("base64");
+    const screenshot = await page.screenshot({ fullPage: false, type: "png" });
+    const base64Screenshot = screenshot.toString("base64");
 
-    steps.push({
-      step: 5,
-      action: "Capture results for AI",
-      result: "✅ Results captured for AI analysis",
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(
+        5,
+        "Capture results for AI",
+        "✅ Results captured for AI analysis"
+      )
+    );
 
     // ==================
     // STEP 6: Extract Ride Options using Gemini Vision
@@ -472,7 +209,7 @@ Return the rides in order from top to bottom as they appear.`,
               },
               {
                 type: "image",
-                image: base64Screenshot2,
+                image: base64Screenshot,
               },
             ],
           },
@@ -492,20 +229,22 @@ Return the rides in order from top to bottom as they appear.`,
 
       console.log("🚗 Extracted rides:", JSON.stringify(rideDetails, null, 2));
 
-      steps.push({
-        step: 6,
-        action: "Extract ride options",
-        result: `✅ Extracted ${rideDetails.rides.length} ride options`,
-        timestamp: new Date().toISOString(),
-      });
+      steps.push(
+        createStep(
+          6,
+          "Extract ride options",
+          `✅ Extracted ${rideDetails.rides.length} ride options`
+        )
+      );
     } catch (e) {
       console.error("❌ Failed to extract rides:", e);
-      steps.push({
-        step: 6,
-        action: "Extract ride options",
-        result: "⚠️ Could not extract ride details",
-        timestamp: new Date().toISOString(),
-      });
+      steps.push(
+        createStep(
+          6,
+          "Extract ride options",
+          "⚠️ Could not extract ride details"
+        )
+      );
     }
 
     return NextResponse.json(
@@ -524,12 +263,13 @@ Return the rides in order from top to bottom as they appear.`,
   } catch (error) {
     console.error("❌ Error in Uber automation:", error);
 
-    steps.push({
-      step: steps.length + 1,
-      action: "Error occurred",
-      result: `❌ ${error instanceof Error ? error.message : "Unknown error"}`,
-      timestamp: new Date().toISOString(),
-    });
+    steps.push(
+      createStep(
+        steps.length + 1,
+        "Error occurred",
+        `❌ ${error instanceof Error ? error.message : "Unknown error"}`
+      )
+    );
 
     return NextResponse.json(
       {
