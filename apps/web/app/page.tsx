@@ -28,14 +28,6 @@ export default function Home() {
       href: "/uber",
       available: true,
     },
-    {
-      id: "swiggy",
-      title: "Swiggy Favourites",
-      description: "Order from favourites",
-      icon: UtensilsCrossed,
-      href: "/swiggy",
-      available: true,
-    },
   ];
 
   return (
