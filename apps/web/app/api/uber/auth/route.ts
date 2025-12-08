@@ -146,11 +146,17 @@ export async function POST(request: NextRequest) {
     let isAuthenticated = false;
     let browserClosedByUser = false;
     const maxWaitTime = 180000; // 3 minutes
-    const checkInterval = 3000; // Check every 3 seconds
+    const checkInterval = 2000; // Check every 2 seconds
     let waitedTime = 0;
 
+    // Set up instant browser close detection using event listener
+    browser.on("disconnected", () => {
+      console.log("⚠️ Browser was closed by user (instant detection)");
+      browserClosedByUser = true;
+    });
+
     // Wait for initial page to fully render (Login buttons need time to appear)
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     while (
       waitedTime < maxWaitTime &&
@@ -160,7 +166,12 @@ export async function POST(request: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, checkInterval));
       waitedTime += checkInterval;
 
-      // Check if browser was closed by user
+      // Check immediately if browser was disconnected (event already set the flag)
+      if (browserClosedByUser) {
+        break;
+      }
+
+      // Backup check if browser was closed by user
       if (!browser.isConnected()) {
         console.log("⚠️ Browser was closed by user");
         browserClosedByUser = true;
