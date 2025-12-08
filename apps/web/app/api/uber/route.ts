@@ -13,6 +13,9 @@ import fs from "fs";
 
 export const maxDuration = 60;
 
+// Path to stored auth state
+const AUTH_STATE_PATH = path.join(process.cwd(), "data", "uber-auth.json");
+
 // Gemini vision model for screenshot analysis
 const visionModel = google("gemini-2.0-flash", {
   safetySettings: [
@@ -110,16 +113,33 @@ export async function POST(request: NextRequest) {
       dropoff,
     });
 
+    // Check if auth state exists
+    const hasAuthState = fs.existsSync(AUTH_STATE_PATH);
+    console.log(`🔐 Auth state exists: ${hasAuthState}`);
+
     // Launch browser
     const headless = process.env.HEADFUL !== "true";
     console.log(`🌐 Launching browser (headless: ${headless})...`);
 
     browser = await launchBrowser({ headless });
-    const context = await browser.newContext({
+
+    // Create context with saved auth state if available
+    const contextOptions: {
+      viewport: { width: number; height: number };
+      userAgent: string;
+      storageState?: string;
+    } = {
       viewport: { width: 1920, height: 1080 },
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    });
+    };
+
+    if (hasAuthState) {
+      contextOptions.storageState = AUTH_STATE_PATH;
+      console.log("✅ Loading saved auth state from:", AUTH_STATE_PATH);
+    }
+
+    const context = await browser.newContext(contextOptions);
 
     const page = await context.newPage();
     await setupStealthMode(page);
@@ -249,86 +269,69 @@ Tell me:
       timestamp: new Date().toISOString(),
     });
 
+    await randomDelay(1000, 1500);
+
     // ==================
-    // STEP 4: Fill in Pickup Location
+    // STEP 4: Fill in Pickup Location (FIRST input)
     // ==================
     console.log(`📍 Step 4: Filling pickup location: ${pickup}...`);
 
     let pickupFilled = false;
 
-    // Try to click on the pickup location field
-    const pickupSelectors = [
-      'input[placeholder*="Pickup" i]',
-      'input[placeholder*="pickup" i]',
-      'input[aria-label*="Pickup" i]',
-      '[data-testid*="pickup"]',
-      'text="Pickup location"',
-      'div:has-text("Pickup location")',
-      'input[type="text"]',
-    ];
+    // Click on the FIRST input or pickup field
+    try {
+      // Try finding all text inputs and click the first one
+      const allInputs = page.locator(
+        'input[type="text"], input[role="combobox"]'
+      );
+      const inputCount = await allInputs.count();
+      console.log(`   Found ${inputCount} text inputs on page`);
 
-    for (const selector of pickupSelectors) {
-      try {
-        console.log(`   Trying selector: ${selector}`);
-        const element = page.locator(selector).first();
+      if (inputCount >= 1) {
+        const firstInput = allInputs.nth(0);
+        await firstInput.click({ timeout: 3000 });
+        await randomDelay(300, 500);
+        console.log("   ✅ Clicked first input (pickup)");
 
-        if (await element.isVisible({ timeout: 2000 })) {
-          await element.click({ timeout: 3000 });
-          await randomDelay(500, 800);
+        // Fill the pickup location
+        await firstInput.fill(pickup);
+        console.log(`   ✅ Filled pickup: "${pickup}"`);
+        await randomDelay(1500, 2000);
 
-          // Clear existing text if any
-          await page.keyboard.press("Control+a");
-          await randomDelay(100, 200);
+        // Select first suggestion
+        console.log("   ⏳ Waiting for suggestions...");
+        const suggestionSelectors = [
+          '[data-testid*="suggestion"]',
+          '[role="option"]',
+          'ul[role="listbox"] li',
+          "ul li",
+        ];
 
-          // Type the pickup location
-          await page.keyboard.type(pickup, { delay: 100 });
-          await randomDelay(1500, 2000);
-
-          // Wait for suggestions and select first one
-          console.log("   ⏳ Waiting for location suggestions...");
-          await randomDelay(1500, 2000);
-
-          // Click on first suggestion
+        for (const sugSelector of suggestionSelectors) {
           try {
-            const suggestionSelectors = [
-              '[data-testid*="suggestion"]',
-              '[role="option"]',
-              '[class*="suggestion"]',
-              '[class*="autocomplete-item"]',
-              "li",
-            ];
-
-            for (const sugSelector of suggestionSelectors) {
-              const suggestion = page.locator(sugSelector).first();
-              if (await suggestion.isVisible({ timeout: 1000 })) {
-                await suggestion.click({ timeout: 2000 });
-                pickupFilled = true;
-                console.log("   ✅ Selected pickup suggestion");
-                break;
-              }
-            }
-
-            if (!pickupFilled) {
-              // Fallback: Use keyboard
-              await page.keyboard.press("ArrowDown");
-              await randomDelay(200, 300);
-              await page.keyboard.press("Enter");
+            const suggestion = page.locator(sugSelector).first();
+            if (await suggestion.isVisible({ timeout: 2000 })) {
+              await suggestion.click({ timeout: 2000 });
               pickupFilled = true;
-              console.log("   ✅ Selected pickup via keyboard");
+              console.log("   ✅ Selected pickup suggestion");
+              break;
             }
           } catch (e) {
-            // Fallback: Use keyboard
-            await page.keyboard.press("ArrowDown");
-            await randomDelay(200, 300);
-            await page.keyboard.press("Enter");
-            pickupFilled = true;
+            continue;
           }
-
-          break;
         }
-      } catch (e) {
-        continue;
+
+        // Fallback: keyboard
+        if (!pickupFilled) {
+          await page.keyboard.press("ArrowDown");
+          await randomDelay(200, 300);
+          await page.keyboard.press("Enter");
+          pickupFilled = true;
+          console.log("   ✅ Selected pickup via keyboard");
+        }
       }
+    } catch (e) {
+      console.log("   ❌ Error filling pickup:", e);
     }
 
     steps.push({
@@ -340,88 +343,118 @@ Tell me:
       timestamp: new Date().toISOString(),
     });
 
-    await randomDelay(1000, 1500);
+    await randomDelay(1500, 2000);
 
     // ==================
-    // STEP 5: Fill in Dropoff Location
+    // STEP 5: Fill in Dropoff Location (SECOND input)
     // ==================
     console.log(`📍 Step 5: Filling dropoff location: ${dropoff}...`);
 
     let dropoffFilled = false;
 
-    // Try to click on the dropoff location field
-    const dropoffSelectors = [
-      'input[placeholder*="Dropoff" i]',
-      'input[placeholder*="dropoff" i]',
-      'input[placeholder*="destination" i]',
-      'input[aria-label*="Dropoff" i]',
-      'input[aria-label*="destination" i]',
-      '[data-testid*="dropoff"]',
-      '[data-testid*="destination"]',
-      'text="Dropoff location"',
-      'div:has-text("Dropoff location")',
-    ];
+    try {
+      // After pickup is selected, there should be a second input for dropoff
+      // Click on the SECOND input
+      const allInputs = page.locator(
+        'input[type="text"], input[role="combobox"]'
+      );
+      const inputCount = await allInputs.count();
+      console.log(`   Found ${inputCount} text inputs on page`);
 
-    for (const selector of dropoffSelectors) {
-      try {
-        console.log(`   Trying selector: ${selector}`);
-        const element = page.locator(selector).first();
+      if (inputCount >= 2) {
+        // Use the second input for dropoff
+        const secondInput = allInputs.nth(1);
+        await secondInput.click({ timeout: 3000 });
+        await randomDelay(300, 500);
+        console.log("   ✅ Clicked second input (dropoff)");
 
-        if (await element.isVisible({ timeout: 2000 })) {
-          await element.click({ timeout: 3000 });
-          await randomDelay(500, 800);
+        // Fill the dropoff location
+        await secondInput.fill(dropoff);
+        console.log(`   ✅ Filled dropoff: "${dropoff}"`);
+        await randomDelay(1500, 2000);
 
-          // Clear existing text if any
-          await page.keyboard.press("Control+a");
-          await randomDelay(100, 200);
+        // Select first suggestion
+        console.log("   ⏳ Waiting for suggestions...");
+        const suggestionSelectors = [
+          '[data-testid*="suggestion"]',
+          '[role="option"]',
+          'ul[role="listbox"] li',
+          "ul li",
+        ];
 
-          // Type the dropoff location
-          await page.keyboard.type(dropoff, { delay: 100 });
-          await randomDelay(1500, 2000);
-
-          // Wait for suggestions and select first one
-          console.log("   ⏳ Waiting for location suggestions...");
-          await randomDelay(1500, 2000);
-
-          // Click on first suggestion or use keyboard
+        for (const sugSelector of suggestionSelectors) {
           try {
-            const suggestionSelectors = [
-              '[data-testid*="suggestion"]',
-              '[role="option"]',
-              '[class*="suggestion"]',
-              '[class*="autocomplete-item"]',
-              "li",
-            ];
-
-            for (const sugSelector of suggestionSelectors) {
-              const suggestion = page.locator(sugSelector).first();
-              if (await suggestion.isVisible({ timeout: 1000 })) {
-                await suggestion.click({ timeout: 2000 });
-                dropoffFilled = true;
-                console.log("   ✅ Selected dropoff suggestion");
-                break;
-              }
+            const suggestion = page.locator(sugSelector).first();
+            if (await suggestion.isVisible({ timeout: 2000 })) {
+              await suggestion.click({ timeout: 2000 });
+              dropoffFilled = true;
+              console.log("   ✅ Selected dropoff suggestion");
+              break;
             }
+          } catch (e) {
+            continue;
+          }
+        }
 
-            if (!dropoffFilled) {
+        // Fallback: keyboard
+        if (!dropoffFilled) {
+          await page.keyboard.press("ArrowDown");
+          await randomDelay(200, 300);
+          await page.keyboard.press("Enter");
+          dropoffFilled = true;
+          console.log("   ✅ Selected dropoff via keyboard");
+        }
+      } else if (inputCount === 1) {
+        // Maybe only one input visible - try clicking on dropoff label first
+        console.log("   Only 1 input found, trying to find dropoff field...");
+
+        const dropoffLabels = [
+          'text="Dropoff location"',
+          'text="Where to?"',
+          '[placeholder*="Dropoff" i]',
+          '[placeholder*="Where" i]',
+        ];
+
+        for (const labelSelector of dropoffLabels) {
+          try {
+            const label = page.locator(labelSelector).first();
+            if (await label.isVisible({ timeout: 1000 })) {
+              await label.click({ timeout: 2000 });
+              await randomDelay(500, 800);
+              console.log("   ✅ Clicked dropoff label");
+
+              // Now find the active input and fill
+              const activeInput = page
+                .locator('input:focus, input[type="text"]')
+                .first();
+              await activeInput.fill(dropoff);
+              console.log(`   ✅ Filled dropoff: "${dropoff}"`);
+              await randomDelay(1500, 2000);
+
               await page.keyboard.press("ArrowDown");
               await randomDelay(200, 300);
               await page.keyboard.press("Enter");
               dropoffFilled = true;
-              console.log("   ✅ Selected dropoff via keyboard");
+              break;
             }
           } catch (e) {
-            await page.keyboard.press("ArrowDown");
-            await randomDelay(200, 300);
-            await page.keyboard.press("Enter");
-            dropoffFilled = true;
+            continue;
           }
-
-          break;
         }
-      } catch (e) {
-        continue;
       }
+    } catch (e) {
+      console.log("   ❌ Error filling dropoff:", e);
+    }
+
+    // Last fallback
+    if (!dropoffFilled) {
+      console.log("   🔄 Last fallback: keyboard.type()");
+      await page.keyboard.type(dropoff, { delay: 50 });
+      await randomDelay(1500, 2000);
+      await page.keyboard.press("ArrowDown");
+      await randomDelay(200, 300);
+      await page.keyboard.press("Enter");
+      dropoffFilled = true;
     }
 
     steps.push({
@@ -433,23 +466,26 @@ Tell me:
       timestamp: new Date().toISOString(),
     });
 
-    await randomDelay(1000, 1500);
+    await randomDelay(1500, 2000);
 
     // ==================
-    // STEP 6: Click Search Button
+    // STEP 6: Click Save/Search Button
     // ==================
-    console.log("🔍 Step 6: Clicking search button...");
+    console.log("🔍 Step 6: Clicking Save/Search button...");
 
     let searchClicked = false;
 
+    // Uber uses "Save" button after selecting both locations
     const searchButtonSelectors = [
+      'button:has-text("Save")',
+      'button:has-text("Confirm")',
+      'button:has-text("Done")',
       'button:has-text("Search")',
-      'button[type="submit"]',
-      '[data-testid*="search"]',
       'button:has-text("See prices")',
       'button:has-text("Request")',
-      'button:has-text("Find")',
-      'button[class*="submit"]',
+      'button[type="submit"]',
+      '[data-testid*="confirm"]',
+      '[data-testid*="save"]',
     ];
 
     for (const selector of searchButtonSelectors) {
@@ -461,7 +497,7 @@ Tell me:
           await element.click({ timeout: 3000 });
           await randomDelay(500, 1000);
           searchClicked = true;
-          console.log(`   ✅ Clicked search button`);
+          console.log(`   ✅ Clicked button: ${selector}`);
           break;
         }
       } catch (e) {
@@ -469,16 +505,29 @@ Tell me:
       }
     }
 
-    // If no search button found, try keyboard Enter
+    // Fallback: Try to find any visible primary button
     if (!searchClicked) {
-      console.log("   🔄 Trying Enter key...");
-      await page.keyboard.press("Enter");
-      searchClicked = true;
+      console.log("   🔄 Trying to find primary button...");
+      try {
+        const primaryBtn = page
+          .locator('button[class*="primary" i], button[class*="submit" i]')
+          .first();
+        if (await primaryBtn.isVisible({ timeout: 2000 })) {
+          await primaryBtn.click({ timeout: 3000 });
+          searchClicked = true;
+          console.log("   ✅ Clicked primary button");
+        }
+      } catch (e) {
+        // Try Enter key
+        console.log("   🔄 Trying Enter key...");
+        await page.keyboard.press("Enter");
+        searchClicked = true;
+      }
     }
 
     steps.push({
       step: 6,
-      action: "Click search button",
+      action: "Click Save/Search button",
       result: searchClicked
         ? "✅ Search initiated"
         : "⚠️ Could not click search button",
