@@ -2,19 +2,15 @@
 
 import { useState, useCallback, useEffect } from "react";
 import useLocalStorage from "use-local-storage";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
-  ArrowLeft,
-  Bot,
   CheckCircle2,
   XCircle,
   Loader2,
-  MousePointer2,
   MapPin,
   Navigation,
   Car,
@@ -38,14 +34,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { uberSearchSchema, type UberSearchInput } from "@/lib/schema/uber";
-import { AutomationResult, AutomationStep } from "@/interfaces/uber";
+import { AutomationResult } from "@/interfaces/uber";
+import {
+  PageHeader,
+  AutomationSteps,
+  ResultCard,
+  LoadingCard,
+  InfoBanner,
+} from "@/components/automation";
 
 export default function UberPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<AutomationResult | null>(null);
   const [isSettingUpAuth, setIsSettingUpAuth] = useState(false);
 
-  // Use localStorage for auth state (supports multi-user)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [authState, setAuthState] = useLocalStorage<any | null>(
     "uber-auth-state",
@@ -64,7 +66,6 @@ export default function UberPage() {
     },
   });
 
-  // Check if auth is valid (exists and not expired - 7 days max)
   const isAuthenticated = useCallback(() => {
     if (!authState || !authTimestamp) return false;
     const timestamp = new Date(authTimestamp);
@@ -74,13 +75,11 @@ export default function UberPage() {
     return ageInDays <= 7;
   }, [authState, authTimestamp]);
 
-  // Get auth last modified for display
   const getAuthLastModified = useCallback(() => {
     if (!authTimestamp) return null;
     return authTimestamp;
   }, [authTimestamp]);
 
-  // Setup authentication
   const setupAuth = async () => {
     setIsSettingUpAuth(true);
     toast.info(
@@ -97,7 +96,6 @@ export default function UberPage() {
       const data = await response.json();
 
       if (data.success && data.authState) {
-        // Store auth state in localStorage
         setAuthState(data.authState);
         setAuthTimestamp(new Date().toISOString());
         toast.success("✅ " + data.message);
@@ -112,19 +110,16 @@ export default function UberPage() {
     }
   };
 
-  // Clear authentication
   const clearAuth = () => {
     setAuthState(null);
     setAuthTimestamp(null);
     toast.success("Session cleared");
   };
 
-  // Check auth on mount (just to trigger re-render with localStorage data)
   useEffect(() => {
     // localStorage is read automatically by useLocalStorage hook
   }, []);
 
-  // Watch values
   const pickup = form.watch("pickup");
   const dropoff = form.watch("dropoff");
 
@@ -143,23 +138,19 @@ export default function UberPage() {
     toast.info(
       "🚗 Starting Uber automation - Checking availability and fares..."
     );
-    console.log("🚗 Starting Uber automation with:", formData);
 
     try {
       const response = await fetch("/api/uber", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           pickup: formData.pickup,
           dropoff: formData.dropoff,
-          authState: authState, // Send auth state from localStorage to server
+          authState: authState,
         }),
       });
 
       const data: AutomationResult = await response.json();
-
       setResult(data);
 
       if (data.authRequired) {
@@ -184,65 +175,15 @@ export default function UberPage() {
     form.setValue("dropoff", pickup);
   }, [form]);
 
-  const getStepIcon = useCallback((step: AutomationStep) => {
-    if (step.result.includes("✅")) {
-      return <CheckCircle2 className="h-5 w-5 text-primary" />;
-    } else if (step.result.includes("❌")) {
-      return <XCircle className="h-5 w-5 text-destructive" />;
-    } else if (step.result.includes("⚠️")) {
-      return <CheckCircle2 className="h-5 w-5 text-secondary-foreground" />;
-    } else if (step.result.includes("ℹ️")) {
-      return <CheckCircle2 className="h-5 w-5 text-primary" />;
-    } else if (step.result.includes("🔒")) {
-      return <XCircle className="h-5 w-5 text-destructive" />;
-    }
-
-    if (step.action.toLowerCase().includes("capture")) {
-      return <Bot className="h-5 w-5 text-primary" />;
-    } else if (
-      step.action.toLowerCase().includes("gemini") ||
-      step.action.toLowerCase().includes("ai")
-    ) {
-      return <Bot className="h-5 w-5 text-primary" />;
-    } else if (
-      step.action.toLowerCase().includes("click") ||
-      step.action.toLowerCase().includes("select")
-    ) {
-      return <MousePointer2 className="h-5 w-5 text-secondary-foreground" />;
-    }
-
-    return <CheckCircle2 className="h-5 w-5 text-primary" />;
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       <div className="relative">
         {/* Header */}
-        <header className="pt-8 pb-6 px-4">
-          <div className="max-w-7xl mx-auto">
-            <Link href="/">
-              <Button variant="ghost" className="mb-4 -ml-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-primary rounded-xl shadow-lg">
-                <Car className="h-8 w-8 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary">
-                  Uber Rides Automation
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Enter pickup and dropoff locations to see available rides and
-                  fares
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
+        <PageHeader
+          title="Uber Rides Automation"
+          description="Enter pickup and dropoff locations to see available rides and fares"
+          icon={Car}
+        />
 
         {/* Main Content */}
         <main className="px-4 py-8">
@@ -280,17 +221,15 @@ export default function UberPage() {
               </CardHeader>
               <CardContent>
                 {isAuthenticated() ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={clearAuth}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Clear Session
-                    </Button>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAuth}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Clear Session
+                  </Button>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground">
@@ -322,7 +261,6 @@ export default function UberPage() {
             {/* Uber Search Form */}
             <Form {...form}>
               <form className="w-full max-w-4xl mx-auto p-4 md:p-6 rounded-xl bg-card border border-border shadow-xl">
-                {/* Main Search Area */}
                 <div className="flex flex-col gap-4">
                   {/* Pickup & Dropoff Group */}
                   <div className="flex flex-col md:flex-row gap-0.5 rounded-lg overflow-hidden border">
@@ -416,219 +354,132 @@ export default function UberPage() {
               </form>
             </Form>
 
-            {/* Ride Results - Outside form */}
-            {result && (
-              <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4">
-                {result.rides && result.rides.length > 0 && (
-                  <Card className="border-primary/30 shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Car className="h-5 w-5 text-primary" />
-                        Available Rides
-                        <span className="text-sm font-normal text-muted-foreground">
-                          ({result.rides.length} options)
-                        </span>
-                      </CardTitle>
-                      <CardDescription>
-                        Showing top {result.rides.length} ride options from Uber
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {result.rides.map((ride, index) => (
-                          <div
-                            key={index}
-                            className="p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all"
-                          >
-                            <div className="flex flex-col md:flex-row md:items-center gap-4">
-                              {/* Ride Info */}
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-primary rounded-lg">
-                                    <Car className="h-6 w-6 text-primary-foreground" />
-                                  </div>
-                                  <div>
-                                    <h3 className="text-lg font-bold">
-                                      {ride.name}
-                                    </h3>
-                                    {ride.description && (
-                                      <p className="text-sm text-muted-foreground">
-                                        {ride.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Extra Info */}
-                                <div className="flex gap-4 mt-2">
-                                  {ride.eta && (
-                                    <span className="text-sm text-muted-foreground">
-                                      ⏱️ {ride.eta}
-                                    </span>
-                                  )}
-                                  {ride.capacity && (
-                                    <span className="text-sm text-muted-foreground">
-                                      👥 {ride.capacity}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Price */}
-                              <div className="text-right md:min-w-[140px]">
-                                <div className="text-2xl font-bold text-primary">
-                                  {ride.fare}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Info Banner - Outside form */}
-            <div className="w-full max-w-4xl mx-auto p-4 rounded-xl border-2 border-primary bg-card">
-              <div className="flex items-start gap-3">
-                <Bot className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium text-primary">AI Automation</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Click <strong>Search Uber Rides</strong> to start the
-                    automation. The AI will:
-                  </p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>Navigate to Uber website</li>
-                    <li>Check if you are logged in</li>
-                    <li>
-                      Fill in pickup: <strong>{pickup || "Not entered"}</strong>
-                    </li>
-                    <li>
-                      Fill in dropoff:{" "}
-                      <strong>{dropoff || "Not entered"}</strong>
-                    </li>
-                    <li>Extract available rides and fares</li>
-                  </ul>
-                  <p className="text-sm text-destructive mt-3">
-                    ⚠️ <strong>Note:</strong> You should be logged into Uber in
-                    the browser for full functionality.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Loading State */}
-            {isRunning && (
-              <Card className="max-w-4xl mx-auto border-2 border-primary/30 animate-pulse">
+            {/* Ride Results */}
+            {result && result.rides && result.rides.length > 0 && (
+              <Card className="max-w-4xl mx-auto border-2 border-primary">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    Running Uber Automation...
+                    <Car className="h-5 w-5 text-primary" />
+                    Available Rides
+                    <span className="text-sm font-normal text-muted-foreground">
+                      ({result.rides.length} options)
+                    </span>
                   </CardTitle>
                   <CardDescription>
-                    Playwright is navigating to Uber and searching for available
-                    rides...
+                    Showing top {result.rides.length} ride options from Uber
                   </CardDescription>
                 </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {result.rides.map((ride, index) => (
+                      <div
+                        key={index}
+                        className="p-4 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-all"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary rounded-lg">
+                                <Car className="h-6 w-6 text-primary-foreground" />
+                              </div>
+                              <div>
+                                <h3 className="text-lg font-bold">
+                                  {ride.name}
+                                </h3>
+                                {ride.description && (
+                                  <p className="text-sm text-muted-foreground">
+                                    {ride.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-4 mt-2">
+                              {ride.eta && (
+                                <span className="text-sm text-muted-foreground">
+                                  ⏱️ {ride.eta}
+                                </span>
+                              )}
+                              {ride.capacity && (
+                                <span className="text-sm text-muted-foreground">
+                                  👥 {ride.capacity}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right md:min-w-[140px]">
+                            <div className="text-2xl font-bold text-primary">
+                              {ride.fare}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
               </Card>
             )}
 
+            {/* Info Banner */}
+            <InfoBanner warning="You should be logged into Uber in the browser for full functionality.">
+              <p>
+                Click <strong>Search Uber Rides</strong> to start the
+                automation. The AI will:
+              </p>
+              <ul className="mt-2 space-y-1 list-disc list-inside">
+                <li>Navigate to Uber website</li>
+                <li>Check if you are logged in</li>
+                <li>
+                  Fill in pickup: <strong>{pickup || "Not entered"}</strong>
+                </li>
+                <li>
+                  Fill in dropoff: <strong>{dropoff || "Not entered"}</strong>
+                </li>
+                <li>Extract available rides and fares</li>
+              </ul>
+            </InfoBanner>
+
+            {/* Loading State */}
+            {isRunning && (
+              <LoadingCard
+                title="Running Uber Automation..."
+                description="Playwright is navigating to Uber and searching for available rides..."
+              />
+            )}
+
             {/* Results */}
-            {result && (
+            {result && !result.authRequired && (
               <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4">
-                {/* Auth Required Warning */}
-                {result.authRequired && (
-                  <Card className="border-2 border-destructive/50 bg-destructive/5">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-destructive">
-                        <XCircle className="h-6 w-6" />
-                        Authentication Required
-                      </CardTitle>
-                      <CardDescription>
-                        Please login to Uber in your browser first and then try
-                        again. The automation detected login/signup buttons
-                        indicating you are not authenticated.
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                )}
-
-                {/* Overall Result */}
-                {!result.authRequired && (
-                  <Card
-                    className={`border-2 ${result.success ? "border-primary/50 bg-primary/5" : "border-secondary/50 bg-secondary/5"}`}
-                  >
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        {result.success ? (
-                          <CheckCircle2 className="h-6 w-6 text-primary" />
-                        ) : (
-                          <XCircle className="h-6 w-6 text-secondary-foreground" />
-                        )}
-                        {result.success
-                          ? "Automation Successful!"
-                          : "Automation Completed with Issues"}
-                      </CardTitle>
-                      <CardDescription>{result.message}</CardDescription>
-                    </CardHeader>
-                    {result.requested && (
-                      <CardContent>
-                        <div className="flex flex-wrap gap-4">
-                          <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                            Pickup: <strong>{result.requested.pickup}</strong>
-                          </div>
-                          <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                            Dropoff: <strong>{result.requested.dropoff}</strong>
-                          </div>
-                        </div>
-                      </CardContent>
-                    )}
-                  </Card>
-                )}
-
-                {/* Steps Timeline */}
-                {result.steps && result.steps.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Execution Steps</CardTitle>
-                      <CardDescription>
-                        Detailed breakdown of each automation step
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {result.steps.map((step, index) => (
-                          <div
-                            key={index}
-                            className="flex gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                          >
-                            <div className="flex-shrink-0">
-                              {getStepIcon(step)}
-                            </div>
-                            <div className="flex-grow min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">
-                                  Step {step.step}:
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {step.action}
-                                </span>
-                              </div>
-                              <p className="text-sm">{step.result}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(step.timestamp).toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                <ResultCard
+                  success={result.success}
+                  message={result.message}
+                  badges={
+                    result.requested
+                      ? [
+                          { label: "Pickup", value: result.requested.pickup },
+                          { label: "Dropoff", value: result.requested.dropoff },
+                        ]
+                      : undefined
+                  }
+                />
+                <AutomationSteps steps={result.steps || []} />
               </div>
+            )}
+
+            {/* Auth Required Warning */}
+            {result?.authRequired && (
+              <Card className="max-w-4xl mx-auto border-2 border-destructive/50 bg-destructive/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <XCircle className="h-6 w-6" />
+                    Authentication Required
+                  </CardTitle>
+                  <CardDescription>
+                    Please login to Uber in your browser first and then try
+                    again. The automation detected login/signup buttons
+                    indicating you are not authenticated.
+                  </CardDescription>
+                </CardHeader>
+              </Card>
             )}
           </div>
         </main>

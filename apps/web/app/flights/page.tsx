@@ -11,13 +11,8 @@ import {
   Calendar as CalendarIcon,
   Users,
   ArrowRightLeft,
-  ArrowLeft,
-  Bot,
-  CheckCircle2,
-  XCircle,
   Loader2,
-  Camera,
-  MousePointer2,
+  Bot,
 } from "lucide-react";
 import {
   flightSearchSchema,
@@ -59,11 +54,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AIRPORTS } from "@/config/airports";
+import { AutomationResult, FlightDetails } from "@/interfaces/flights";
 import {
-  AutomationResult,
-  AutomationStep,
-  FlightDetails,
-} from "@/interfaces/flights";
+  PageHeader,
+  AutomationSteps,
+  ResultCard,
+  LoadingCard,
+  InfoBanner,
+} from "@/components/automation";
 
 export default function AutoPage() {
   const [date, setDate] = useState<DateRange | undefined>();
@@ -267,34 +265,6 @@ export default function AutoPage() {
     form.setValue("adults", Math.min(9, (form.getValues("adults") || 1) + 1));
   }, [form]);
 
-  const getStepIcon = useCallback((step: AutomationStep) => {
-    if (step.result.includes("✅")) {
-      return <CheckCircle2 className="h-5 w-5 text-primary" />;
-    } else if (step.result.includes("❌")) {
-      return <XCircle className="h-5 w-5 text-destructive" />;
-    } else if (step.result.includes("⚠️")) {
-      return <CheckCircle2 className="h-5 w-5 text-secondary-foreground" />;
-    } else if (step.result.includes("ℹ️")) {
-      return <CheckCircle2 className="h-5 w-5 text-primary" />;
-    }
-
-    if (step.action.toLowerCase().includes("screenshot")) {
-      return <Camera className="h-5 w-5 text-primary" />;
-    } else if (
-      step.action.toLowerCase().includes("gemini") ||
-      step.action.toLowerCase().includes("ai")
-    ) {
-      return <Bot className="h-5 w-5 text-primary" />;
-    } else if (
-      step.action.toLowerCase().includes("click") ||
-      step.action.toLowerCase().includes("select")
-    ) {
-      return <MousePointer2 className="h-5 w-5 text-secondary-foreground" />;
-    }
-
-    return <CheckCircle2 className="h-5 w-5 text-primary" />;
-  }, []);
-
   // Memoized disabled date check function
   const isDateDisabled = useCallback(
     (dateToCheck: Date) =>
@@ -306,31 +276,11 @@ export default function AutoPage() {
     <div className="min-h-screen bg-background">
       <div className="relative">
         {/* Header */}
-        <header className="pt-8 pb-6 px-4">
-          <div className="max-w-7xl mx-auto">
-            <Link href="/">
-              <Button variant="ghost" className="mb-4 -ml-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-primary rounded-xl shadow-lg">
-                <Plane className="h-8 w-8 text-primary-foreground" />
-              </div>
-              <div>
-                <h1 className="text-4xl md:text-5xl font-bold text-primary">
-                  Flight Booking Automation
-                </h1>
-                <p className="text-muted-foreground mt-1">
-                  Set your preferences and click Explore to mirror them on
-                  booking.com
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
+        <PageHeader
+          title="Flight Booking Automation"
+          description="Set your preferences and click Explore to mirror them on booking.com"
+          icon={Plane}
+        />
 
         {/* Main Content */}
         <main className="px-4 py-8">
@@ -841,160 +791,91 @@ export default function AutoPage() {
               </div>
             )}
 
-            {/* Info Banner - Outside form, inside Form provider */}
-            <div className="w-full max-w-4xl mx-auto mt-6 p-4 rounded-xl border-2 border-primary bg-card">
-              <div className="flex items-start gap-3">
-                <Bot className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium text-primary">AI Automation</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Click <strong>Explore</strong> to start the automation. The
-                    AI will navigate to booking.com and set:
-                  </p>
-                  <ul className="text-sm text-muted-foreground mt-2 space-y-1 list-disc list-inside">
-                    <li>
-                      Trip type:{" "}
-                      <strong>
-                        {tripType === "round-trip" ? "Round-trip" : "One-way"}
-                      </strong>
-                    </li>
-                    <li>
-                      Travel class:{" "}
-                      <strong>
-                        {travelClassDisplay[travelClass] || travelClass}
-                      </strong>{" "}
-                      <span className="text-xs opacity-70">
-                        (booking.com: {travelClassBookingDisplay[travelClass]})
-                      </span>
-                    </li>
-                    <li>
-                      Origin: <strong>{fromAirport || "Auto-detected"}</strong>
-                    </li>
-                    <li>
-                      Destination:{" "}
-                      <strong>{toAirport || "Not selected"}</strong>
-                    </li>
-                    <li>
-                      Travel dates:{" "}
-                      <strong>
-                        {departDate
-                          ? tripType === "round-trip" && returnDate
-                            ? `${departDate} – ${returnDate}`
-                            : departDate
-                          : "Not selected"}
-                      </strong>
-                    </li>
-                    <li>
-                      Direct flights only:{" "}
-                      <strong>{directFlights ? "Yes" : "No"}</strong>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            {/* Info Banner */}
+            <InfoBanner>
+              <p>
+                Click <strong>Explore</strong> to start the automation. The AI
+                will navigate to booking.com and set:
+              </p>
+              <ul className="mt-2 space-y-1 list-disc list-inside">
+                <li>
+                  Trip type:{" "}
+                  <strong>
+                    {tripType === "round-trip" ? "Round-trip" : "One-way"}
+                  </strong>
+                </li>
+                <li>
+                  Travel class:{" "}
+                  <strong>
+                    {travelClassDisplay[travelClass] || travelClass}
+                  </strong>{" "}
+                  <span className="text-xs opacity-70">
+                    (booking.com: {travelClassBookingDisplay[travelClass]})
+                  </span>
+                </li>
+                <li>
+                  Origin: <strong>{fromAirport || "Auto-detected"}</strong>
+                </li>
+                <li>
+                  Destination: <strong>{toAirport || "Not selected"}</strong>
+                </li>
+                <li>
+                  Travel dates:{" "}
+                  <strong>
+                    {departDate
+                      ? tripType === "round-trip" && returnDate
+                        ? `${departDate} – ${returnDate}`
+                        : departDate
+                      : "Not selected"}
+                  </strong>
+                </li>
+                <li>
+                  Direct flights only:{" "}
+                  <strong>{directFlights ? "Yes" : "No"}</strong>
+                </li>
+              </ul>
+            </InfoBanner>
 
             {/* Loading State */}
             {isRunning && (
-              <Card className="max-w-4xl mx-auto border-2 border-primary/30 animate-pulse">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                    Running Automation...
-                  </CardTitle>
-                  <CardDescription>
-                    Playwright is navigating to booking.com and Gemini is
-                    analyzing the page...
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <LoadingCard
+                title="Running Automation..."
+                description="Playwright is navigating to booking.com and Gemini is analyzing the page..."
+              />
             )}
 
             {/* Results */}
             {result && (
               <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom-4">
                 {/* Overall Result */}
-                <Card
-                  className={`border-2 ${result.success ? "border-primary/50 bg-primary/5" : "border-secondary/50 bg-secondary/5"}`}
-                >
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      {result.success ? (
-                        <CheckCircle2 className="h-6 w-6 text-primary" />
-                      ) : (
-                        <XCircle className="h-6 w-6 text-secondary-foreground" />
-                      )}
-                      {result.success
-                        ? "Automation Successful!"
-                        : "Automation Completed with Issues"}
-                    </CardTitle>
-                    <CardDescription>{result.message}</CardDescription>
-                  </CardHeader>
-                  {result.requested && (
-                    <CardContent>
-                      <div className="flex flex-wrap gap-4">
-                        <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                          Trip: <strong>{result.requested.tripType}</strong>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                          Class: <strong>{result.requested.travelClass}</strong>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                          Route:{" "}
-                          <strong>
-                            {result.requested.from || "Auto"} →{" "}
-                            {result.requested.to || "N/A"}
-                          </strong>
-                        </div>
-                        <div className="px-3 py-1 rounded-full bg-muted text-sm">
-                          Direct:{" "}
-                          <strong>
-                            {result.requested.directFlights ? "Yes" : "No"}
-                          </strong>
-                        </div>
-                      </div>
-                    </CardContent>
-                  )}
-                </Card>
+                <ResultCard
+                  success={result.success}
+                  message={result.message}
+                  badges={
+                    result.requested
+                      ? [
+                          { label: "Trip", value: result.requested.tripType },
+                          {
+                            label: "Class",
+                            value: result.requested.travelClass,
+                          },
+                          {
+                            label: "Route",
+                            value: `${result.requested.from || "Auto"} → ${result.requested.to || "N/A"}`,
+                          },
+                          {
+                            label: "Direct",
+                            value: result.requested.directFlights
+                              ? "Yes"
+                              : "No",
+                          },
+                        ]
+                      : undefined
+                  }
+                />
 
                 {/* Steps Timeline */}
-                {result.steps && result.steps.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Execution Steps</CardTitle>
-                      <CardDescription>
-                        Detailed breakdown of each automation step
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        {result.steps.map((step, index) => (
-                          <div
-                            key={index}
-                            className="flex gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                          >
-                            <div className="flex-shrink-0">
-                              {getStepIcon(step)}
-                            </div>
-                            <div className="flex-grow min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-medium">
-                                  Step {step.step}:
-                                </span>
-                                <span className="text-muted-foreground">
-                                  {step.action}
-                                </span>
-                              </div>
-                              <p className="text-sm">{step.result}</p>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(step.timestamp).toLocaleTimeString()}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                <AutomationSteps steps={result.steps || []} />
 
                 {/* AI Analysis Details */}
                 {result.analysis && (
