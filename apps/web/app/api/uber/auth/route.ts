@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     // Navigate to Uber login (with longer timeout)
     console.log("📍 Navigating to Uber...");
     try {
-      await page.goto("https://m.uber.com/", {
+      await page.goto("https://auth.uber.com/", {
         waitUntil: "domcontentloaded",
         timeout: 60000, // 60 seconds for slow connections
       });
