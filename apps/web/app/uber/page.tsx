@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
-  Camera,
   MousePointer2,
   MapPin,
   Navigation,
@@ -52,7 +51,6 @@ interface AutomationStep {
   step: number;
   action: string;
   result: string;
-  screenshotUrl?: string;
   timestamp: string;
 }
 
@@ -232,8 +230,8 @@ export default function UberPage() {
       return <XCircle className="h-5 w-5 text-destructive" />;
     }
 
-    if (step.action.toLowerCase().includes("screenshot")) {
-      return <Camera className="h-5 w-5 text-primary" />;
+    if (step.action.toLowerCase().includes("capture")) {
+      return <Bot className="h-5 w-5 text-primary" />;
     } else if (
       step.action.toLowerCase().includes("gemini") ||
       step.action.toLowerCase().includes("ai")
@@ -435,7 +433,15 @@ export default function UberPage() {
                   {/* Search Button */}
                   <Button
                     type="button"
-                    onClick={runAutomation}
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        toast.error(
+                          "🔒 You have to login/signup to Uber first before searching for rides."
+                        );
+                        return;
+                      }
+                      runAutomation();
+                    }}
                     disabled={isRunning}
                     className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg rounded-lg mt-2"
                   >
@@ -663,44 +669,6 @@ export default function UberPage() {
                             </div>
                           </div>
                         ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* Screenshots */}
-                {result.steps && result.steps.some((s) => s.screenshotUrl) && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Camera className="h-5 w-5" />
-                        Screenshots
-                      </CardTitle>
-                      <CardDescription>
-                        Visual proof of automation execution
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid gap-6">
-                        {result.steps
-                          .filter((s) => s.screenshotUrl)
-                          .map((step, index) => (
-                            <div key={index} className="space-y-2">
-                              <p className="text-sm font-medium">
-                                Step {step.step}: {step.action}
-                              </p>
-                              <div className="rounded-lg overflow-hidden border-2 border-muted shadow-lg">
-                                <img
-                                  src={step.screenshotUrl}
-                                  alt={`Screenshot for step ${step.step}`}
-                                  className="w-full h-auto"
-                                />
-                              </div>
-                              <p className="text-xs text-muted-foreground">
-                                Saved to: public{step.screenshotUrl}
-                              </p>
-                            </div>
-                          ))}
                       </div>
                     </CardContent>
                   </Card>
