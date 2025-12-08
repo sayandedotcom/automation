@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import useLocalStorage from "use-local-storage";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,7 +21,6 @@ import {
   ArrowRightLeft,
   LogIn,
   LogOut,
-  RefreshCw,
 } from "lucide-react";
 import {
   Form,
@@ -77,9 +77,18 @@ interface AutomationResult {
 export default function UberPage() {
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<AutomationResult | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isSettingUpAuth, setIsSettingUpAuth] = useState(false);
-  const [authLastModified, setAuthLastModified] = useState<string | null>(null);
+
+  // Use localStorage for auth state (supports multi-user)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [authState, setAuthState] = useLocalStorage<any | null>(
+    "uber-auth-state",
+    null
+  );
+  const [authTimestamp, setAuthTimestamp] = useLocalStorage<string | null>(
+    "uber-auth-timestamp",
+    null
+  );
 
   const form = useForm<UberSearchInput>({
     resolver: zodResolver(uberSearchSchema),
@@ -89,18 +98,21 @@ export default function UberPage() {
     },
   });
 
-  // Check auth status on mount
-  const checkAuthStatus = async () => {
-    try {
-      const response = await fetch("/api/uber/auth");
-      const data = await response.json();
-      setIsAuthenticated(data.authenticated);
-      setAuthLastModified(data.lastModified);
-    } catch (error) {
-      console.error("Failed to check auth status:", error);
-      setIsAuthenticated(false);
-    }
-  };
+  // Check if auth is valid (exists and not expired - 7 days max)
+  const isAuthenticated = useCallback(() => {
+    if (!authState || !authTimestamp) return false;
+    const timestamp = new Date(authTimestamp);
+    const now = new Date();
+    const ageInDays =
+      (now.getTime() - timestamp.getTime()) / (1000 * 60 * 60 * 24);
+    return ageInDays <= 7;
+  }, [authState, authTimestamp]);
+
+  // Get auth last modified for display
+  const getAuthLastModified = useCallback(() => {
+    if (!authTimestamp) return null;
+    return authTimestamp;
+  }, [authTimestamp]);
 
   // Setup authentication
   const setupAuth = async () => {
@@ -118,10 +130,11 @@ export default function UberPage() {
 
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success && data.authState) {
+        // Store auth state in localStorage
+        setAuthState(data.authState);
+        setAuthTimestamp(new Date().toISOString());
         toast.success("✅ " + data.message);
-        setIsAuthenticated(true);
-        checkAuthStatus();
       } else {
         toast.error("❌ " + data.message);
       }
@@ -134,28 +147,15 @@ export default function UberPage() {
   };
 
   // Clear authentication
-  const clearAuth = async () => {
-    try {
-      const response = await fetch("/api/uber/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "clear" }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        toast.success("Session cleared");
-        setIsAuthenticated(false);
-        setAuthLastModified(null);
-      }
-    } catch (error) {
-      console.error("Failed to clear auth:", error);
-    }
+  const clearAuth = () => {
+    setAuthState(null);
+    setAuthTimestamp(null);
+    toast.success("Session cleared");
   };
 
-  // Check auth on mount
+  // Check auth on mount (just to trigger re-render with localStorage data)
   useEffect(() => {
-    checkAuthStatus();
+    // localStorage is read automatically by useLocalStorage hook
   }, []);
 
   // Watch values
@@ -188,6 +188,7 @@ export default function UberPage() {
         body: JSON.stringify({
           pickup: formData.pickup,
           dropoff: formData.dropoff,
+          authState: authState, // Send auth state from localStorage to server
         }),
       });
 
@@ -208,7 +209,7 @@ export default function UberPage() {
     } finally {
       setIsRunning(false);
     }
-  }, [form]);
+  }, [form, authState]);
 
   const handleSwap = useCallback(() => {
     const pickup = form.getValues("pickup");
@@ -283,21 +284,16 @@ export default function UberPage() {
             {/* Auth Status Card */}
             <Card
               className={`max-w-4xl mx-auto border-2 ${
-                isAuthenticated === null
-                  ? "border-muted"
-                  : isAuthenticated
+                !authState
+                  ? "border-amber-500/50 bg-amber-500/5"
+                  : isAuthenticated()
                     ? "border-green-500/50 bg-green-500/5"
                     : "border-amber-500/50 bg-amber-500/5"
               }`}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  {isAuthenticated === null ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Checking authentication...
-                    </>
-                  ) : isAuthenticated ? (
+                  {isAuthenticated() ? (
                     <>
                       <CheckCircle2 className="h-5 w-5 text-green-500" />
                       Uber Session Active
@@ -309,23 +305,16 @@ export default function UberPage() {
                     </>
                   )}
                 </CardTitle>
-                {authLastModified && (
+                {getAuthLastModified() && (
                   <CardDescription>
-                    Session saved: {new Date(authLastModified).toLocaleString()}
+                    Session saved:{" "}
+                    {new Date(getAuthLastModified()!).toLocaleString()}
                   </CardDescription>
                 )}
               </CardHeader>
               <CardContent>
-                {isAuthenticated ? (
+                {isAuthenticated() ? (
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={checkAuthStatus}
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refresh Status
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -434,7 +423,7 @@ export default function UberPage() {
                   <Button
                     type="button"
                     onClick={() => {
-                      if (!isAuthenticated) {
+                      if (!isAuthenticated()) {
                         toast.error(
                           "🔒 You have to login/signup to Uber first before searching for rides."
                         );

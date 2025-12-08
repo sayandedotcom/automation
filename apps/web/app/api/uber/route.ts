@@ -7,13 +7,8 @@ import {
 import { google } from "@ai-sdk/google";
 import { generateObject } from "ai";
 import { z } from "zod";
-import path from "path";
-import fs from "fs";
 
 export const maxDuration = 60;
-
-// Path to stored auth state
-const AUTH_STATE_PATH = path.join(process.cwd(), "data", "uber-auth.json");
 
 // Gemini vision model for screenshot analysis
 const visionModel = google("gemini-2.0-flash", {
@@ -70,16 +65,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { pickup, dropoff } = body;
+    const { pickup, dropoff, authState } = body;
 
     console.log("🚗 Starting Uber automation with:", {
       pickup,
       dropoff,
+      hasAuthState: !!authState,
     });
-
-    // Check if auth state exists
-    const hasAuthState = fs.existsSync(AUTH_STATE_PATH);
-    console.log(`🔐 Auth state exists: ${hasAuthState}`);
 
     // Launch browser
     const headless = process.env.HEADFUL !== "true";
@@ -87,20 +79,37 @@ export async function POST(request: NextRequest) {
 
     browser = await launchBrowser({ headless });
 
-    // Create context with saved auth state if available
+    // Create context with auth state from client (localStorage)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const contextOptions: {
       viewport: { width: number; height: number };
       userAgent: string;
-      storageState?: string;
+      storageState?: {
+        cookies: Array<{
+          name: string;
+          value: string;
+          domain: string;
+          path: string;
+          expires: number;
+          httpOnly: boolean;
+          secure: boolean;
+          sameSite: "Strict" | "Lax" | "None";
+        }>;
+        origins: Array<{
+          origin: string;
+          localStorage: Array<{ name: string; value: string }>;
+        }>;
+      };
     } = {
       viewport: { width: 1920, height: 1080 },
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     };
 
-    if (hasAuthState) {
-      contextOptions.storageState = AUTH_STATE_PATH;
-      console.log("✅ Loading saved auth state from:", AUTH_STATE_PATH);
+    // Use auth state from client if provided
+    if (authState) {
+      contextOptions.storageState = authState;
+      console.log("✅ Using auth state from client localStorage");
     }
 
     const context = await browser.newContext(contextOptions);

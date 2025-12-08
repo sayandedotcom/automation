@@ -1,86 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { launchBrowser, setupStealthMode } from "@/lib/playwright-utils";
-import path from "path";
-import fs from "fs";
 
 export const maxDuration = 120; // Allow more time for manual login
 
-// Path to store auth state
-const AUTH_STATE_PATH = path.join(process.cwd(), "data", "uber-auth.json");
-
-// Ensure data directory exists
-function ensureDataDir() {
-  const dataDir = path.join(process.cwd(), "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  return dataDir;
-}
-
-// Check if auth state exists and is recent enough to be valid
-// Note: We trust file existence because we only save it after verified UI login detection
+// GET: Simple endpoint - auth checking is now done on client via localStorage
 export async function GET() {
-  try {
-    const exists = fs.existsSync(AUTH_STATE_PATH);
-
-    if (!exists) {
-      return NextResponse.json({
-        authenticated: false,
-        lastModified: null,
-        path: AUTH_STATE_PATH,
-      });
-    }
-
-    // Get file stats to check last modification time
-    const stats = fs.statSync(AUTH_STATE_PATH);
-    const lastModified = stats.mtime;
-    const now = new Date();
-    const ageInDays =
-      (now.getTime() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
-
-    // If auth state is older than 7 days, consider it expired
-    // Uber sessions typically don't last longer than this
-    if (ageInDays > 7) {
-      fs.unlinkSync(AUTH_STATE_PATH);
-      return NextResponse.json({
-        authenticated: false,
-        lastModified: null,
-        path: AUTH_STATE_PATH,
-        reason: "Session expired (older than 7 days)",
-      });
-    }
-
-    // Read the auth state to verify it has content
-    const authState = JSON.parse(fs.readFileSync(AUTH_STATE_PATH, "utf-8"));
-    const cookies = authState.cookies || [];
-
-    // Basic sanity check - auth state should have cookies
-    if (cookies.length === 0) {
-      fs.unlinkSync(AUTH_STATE_PATH);
-      return NextResponse.json({
-        authenticated: false,
-        lastModified: null,
-        path: AUTH_STATE_PATH,
-        reason: "Invalid auth state (no cookies)",
-      });
-    }
-
-    return NextResponse.json({
-      authenticated: true,
-      lastModified: lastModified.toISOString(),
-      path: AUTH_STATE_PATH,
-      cookieCount: cookies.length,
-      ageInDays: Math.round(ageInDays * 10) / 10,
-    });
-  } catch (error) {
-    return NextResponse.json({
-      authenticated: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-  }
+  return NextResponse.json({
+    message: "Auth status should be checked from localStorage on the client",
+    clientSideAuth: true,
+  });
 }
 
-// Setup authentication - opens browser for user to login
+// POST: Setup authentication - opens browser for user to login
 export async function POST(request: NextRequest) {
   let browser;
 
@@ -88,24 +19,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const { action } = body;
 
-    // If action is "clear", delete the auth state
+    // If action is "clear", just return success (client handles clearing localStorage)
     if (action === "clear") {
-      if (fs.existsSync(AUTH_STATE_PATH)) {
-        fs.unlinkSync(AUTH_STATE_PATH);
-      }
       return NextResponse.json({
         success: true,
         message: "Auth state cleared",
       });
-    }
-
-    ensureDataDir();
-
-    // IMPORTANT: Clear any existing auth state before starting new auth flow
-    // This prevents false-positive auth status if user abandons the login
-    if (fs.existsSync(AUTH_STATE_PATH)) {
-      fs.unlinkSync(AUTH_STATE_PATH);
-      console.log("🗑️ Cleared existing auth state to start fresh");
     }
 
     console.log("🔐 Starting Uber auth setup...");
@@ -139,7 +58,6 @@ export async function POST(request: NextRequest) {
     console.log("✅ Page loaded, waiting for user to login...");
 
     // Wait for user to login (max 3 minutes)
-    // We require POSITIVE proof of authentication - Activity button or profile must be visible
     console.log("⏳ Waiting for user to login (max 3 minutes)...");
     console.log("   Please login to Uber in the browser window that opened.");
 
@@ -155,7 +73,7 @@ export async function POST(request: NextRequest) {
       browserClosedByUser = true;
     });
 
-    // Wait for initial page to fully render (Login buttons need time to appear)
+    // Wait for initial page to fully render
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     while (
@@ -166,7 +84,7 @@ export async function POST(request: NextRequest) {
       await new Promise((resolve) => setTimeout(resolve, checkInterval));
       waitedTime += checkInterval;
 
-      // Check immediately if browser was disconnected (event already set the flag)
+      // Check immediately if browser was disconnected
       if (browserClosedByUser) {
         break;
       }
@@ -185,13 +103,7 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // Look for POSITIVE indicators of being logged in:
-      // 1. Activity button (ride history) - most reliable
-      // 2. Profile/account icon or menu
-      // 3. Pickup/dropoff form with user name visible
-      // NOTE: We do NOT use cookies for detection because Uber sets session/sid cookies
-      //       even for unauthenticated visitors!
-
+      // Look for POSITIVE indicators of being logged in
       const activityButtonVisible = await page
         .locator('text="Activity"')
         .isVisible()
@@ -205,28 +117,24 @@ export async function POST(request: NextRequest) {
         .isVisible()
         .catch(() => false);
 
-      // Check for "Ride" tab which appears when logged in on m.uber.com
       const rideTabVisible = await page
         .locator('a[href*="/go/ride"], button:has-text("Ride")')
         .first()
         .isVisible()
         .catch(() => false);
 
-      // Check for pickup location input which only appears when authenticated
       const pickupInputVisible = await page
         .locator('[data-testid="pickup-input"], input[placeholder*="Pickup" i]')
         .first()
         .isVisible()
         .catch(() => false);
 
-      // Check URL - after login, URL changes to these authenticated routes
       const currentUrl = page.url();
       const isOnAuthenticatedPage =
         currentUrl.includes("/go/") ||
         currentUrl.includes("/looking") ||
         currentUrl.includes("/ride");
 
-      // Require POSITIVE proof: UI elements that ONLY appear when logged in
       const hasPositiveAuthProof =
         activityButtonVisible ||
         accountButtonVisible ||
@@ -234,7 +142,6 @@ export async function POST(request: NextRequest) {
         (isOnAuthenticatedPage && (rideTabVisible || pickupInputVisible));
 
       if (hasPositiveAuthProof) {
-        // Double-check by ensuring login/signup buttons are NOT visible
         const loginButtonVisible = await page
           .locator(
             'button:has-text("Log in"), button:has-text("Sign up"), a:has-text("Log in"), a:has-text("Sign up"), button:has-text("Continue")'
@@ -243,7 +150,6 @@ export async function POST(request: NextRequest) {
           .isVisible()
           .catch(() => false);
 
-        // Only consider authenticated if login buttons are gone OR we have very strong proof
         if (
           !loginButtonVisible ||
           activityButtonVisible ||
@@ -276,18 +182,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (isAuthenticated) {
-      // Save the authentication state
-      console.log("💾 Saving auth state...");
-      await context.storageState({ path: AUTH_STATE_PATH });
+      // Get the authentication state (don't save to file, return it to client)
+      console.log("💾 Getting auth state...");
+      const authState = await context.storageState();
 
-      console.log("✅ Auth state saved to:", AUTH_STATE_PATH);
+      console.log("✅ Auth state retrieved successfully");
 
       await browser.close();
 
+      // Return auth state to client for localStorage storage
       return NextResponse.json({
         success: true,
         message: "Successfully logged in! Your session has been saved.",
-        path: AUTH_STATE_PATH,
+        authState: authState, // Send auth state to client
+        timestamp: new Date().toISOString(),
       });
     } else {
       await browser.close();
