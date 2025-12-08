@@ -9,6 +9,7 @@ import {
   pageAnalysisSchema,
   verificationSchema,
   flightDetailsSchema,
+  flightsApiRequestSchema,
 } from "@/lib/schema/flights";
 import { visionModel } from "@/lib/ai";
 import {
@@ -38,6 +39,19 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+
+    // Validate request body
+    const parseResult = flightsApiRequestSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Invalid request: ${parseResult.error.issues.map((i) => i.message).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       tripType,
       travelClass,
@@ -47,7 +61,7 @@ export async function POST(request: NextRequest) {
       departDate,
       returnDate,
       adults,
-    } = body;
+    } = parseResult.data;
 
     console.log("🚀 Starting automation with:", {
       tripType,

@@ -24,3 +24,28 @@ export interface AutomationResult {
     dropoff: string;
   };
 }
+
+// Playwright storage state type for Uber authentication
+export interface UberStorageState {
+  cookies: Array<{
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    expires: number;
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite: "Strict" | "Lax" | "None";
+  }>;
+  origins: Array<{
+    origin: string;
+    localStorage: Array<{ name: string; value: string }>;
+  }>;
+}
+
+// API request body type
+export interface UberSearchRequest {
+  pickup: string;
+  dropoff: string;
+  authState?: UberStorageState;
+}

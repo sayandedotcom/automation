@@ -68,3 +68,12 @@ export const uberAuthStateSchema = z.object({
 });
 
 export type UberAuthState = z.infer<typeof uberAuthStateSchema>;
+
+// Schema for API request validation
+export const uberApiRequestSchema = z.object({
+  pickup: z.string().min(1, "Pickup location is required"),
+  dropoff: z.string().min(1, "Dropoff location is required"),
+  authState: uberAuthStateSchema.optional(),
+});
+
+export type UberApiRequest = z.infer<typeof uberApiRequestSchema>;

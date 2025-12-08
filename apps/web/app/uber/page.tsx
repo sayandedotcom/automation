@@ -34,7 +34,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { uberSearchSchema, type UberSearchInput } from "@/lib/schema/uber";
-import { AutomationResult } from "@/lib/types/uber";
+import { AutomationResult, UberStorageState } from "@/lib/types/uber";
 import {
   PageHeader,
   AutomationSteps,
@@ -48,8 +48,7 @@ export default function UberPage() {
   const [result, setResult] = useState<AutomationResult | null>(null);
   const [isSettingUpAuth, setIsSettingUpAuth] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [authState, setAuthState] = useLocalStorage<any | null>(
+  const [authState, setAuthState] = useLocalStorage<UberStorageState | null>(
     "uber-auth-state",
     null
   );
@@ -116,9 +115,7 @@ export default function UberPage() {
     toast.success("Session cleared");
   };
 
-  useEffect(() => {
-    // localStorage is read automatically by useLocalStorage hook
-  }, []);
+  // Note: localStorage is read automatically by useLocalStorage hook
 
   const pickup = form.watch("pickup");
   const dropoff = form.watch("dropoff");

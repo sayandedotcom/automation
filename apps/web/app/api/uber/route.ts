@@ -5,7 +5,7 @@ import {
   randomDelay,
 } from "@/lib/playwright-utils";
 import { generateObject } from "ai";
-import { rideOptionsSchema } from "@/lib/schema/uber";
+import { rideOptionsSchema, uberApiRequestSchema } from "@/lib/schema/uber";
 import { visionModel } from "@/lib/ai";
 import {
   createStep,
@@ -28,7 +28,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { pickup, dropoff, authState } = body;
+
+    // Validate request body
+    const parseResult = uberApiRequestSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Invalid request: ${parseResult.error.issues.map((i) => i.message).join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { pickup, dropoff, authState } = parseResult.data;
 
     console.log("🚗 Starting Uber automation with:", {
       pickup,
@@ -69,8 +82,9 @@ export async function POST(request: NextRequest) {
     };
 
     // Use auth state from client if provided
-    if (authState) {
-      contextOptions.storageState = authState;
+    if (authState && authState.cookies && authState.origins) {
+      contextOptions.storageState =
+        authState as typeof contextOptions.storageState;
       console.log("✅ Using auth state from client localStorage");
     }
 

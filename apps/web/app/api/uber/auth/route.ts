@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         message:
-          "Login timed out. Please try again and complete the login within 2 minutes.",
+          "Login timed out. Please try again and complete the login within 3 minutes.",
       });
     }
   } catch (error) {

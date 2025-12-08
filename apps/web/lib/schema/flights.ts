@@ -83,7 +83,6 @@ export const verificationSchema = z.object({
   description: z.string().describe("Description of the result"),
 });
 
-// Schema for flight details extraction
 export const flightDetailsSchema = z.object({
   flights: z
     .array(
@@ -112,3 +111,19 @@ export const flightDetailsSchema = z.object({
     .optional()
     .describe("Total number of results if shown"),
 });
+
+// Schema for API request validation
+export const flightsApiRequestSchema = z.object({
+  tripType: z.enum(["round-trip", "one-way"]).default("round-trip"),
+  travelClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
+  directFlights: z.boolean().default(false),
+  from: z.string().min(1, "Origin is required"),
+  to: z.string().min(1, "Destination is required"),
+  departDate: z.string().min(1, "Departure date is required"),
+  returnDate: z.string().optional(),
+  adults: z.number().min(1).max(9).default(1),
+});
+
+export type FlightsApiRequest = z.infer<typeof flightsApiRequestSchema>;
