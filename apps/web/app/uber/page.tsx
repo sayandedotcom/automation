@@ -37,42 +37,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { z } from "zod";
-
-// Schema for Uber ride search
-const uberSearchSchema = z.object({
-  pickup: z.string().min(3, "Pickup location must be at least 3 characters"),
-  dropoff: z.string().min(3, "Dropoff location must be at least 3 characters"),
-});
-
-type UberSearchInput = z.infer<typeof uberSearchSchema>;
-
-interface AutomationStep {
-  step: number;
-  action: string;
-  result: string;
-  timestamp: string;
-}
-
-interface RideOption {
-  name: string;
-  description?: string;
-  fare: string;
-  eta?: string;
-  capacity?: string;
-}
-
-interface AutomationResult {
-  success: boolean;
-  message: string;
-  steps: AutomationStep[];
-  rides?: RideOption[];
-  authRequired?: boolean;
-  requested?: {
-    pickup: string;
-    dropoff: string;
-  };
-}
+import { uberSearchSchema, type UberSearchInput } from "@/lib/schema/uber";
+import { AutomationResult, AutomationStep } from "@/interfaces/uber";
 
 export default function UberPage() {
   const [isRunning, setIsRunning] = useState(false);
