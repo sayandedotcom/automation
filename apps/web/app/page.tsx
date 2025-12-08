@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Plane, Car, UtensilsCrossed } from "lucide-react";
 
 export default function Home() {
@@ -20,7 +26,7 @@ export default function Home() {
       description: "Get ride pricing info",
       icon: Car,
       href: "/uber",
-      available: false,
+      available: true,
     },
     {
       id: "swiggy",
@@ -28,7 +34,7 @@ export default function Home() {
       description: "Order from favourites",
       icon: UtensilsCrossed,
       href: "/swiggy",
-      available: false,
+      available: true,
     },
   ];
 
@@ -49,7 +55,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {automations.map((automation) => {
             const Icon = automation.icon;
-            
+
             if (!automation.available) {
               return (
                 <Card
@@ -60,11 +66,17 @@ export default function Home() {
                     <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                       <Icon className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <CardTitle className="text-lg text-foreground">{automation.title}</CardTitle>
-                    <CardDescription className="text-sm">{automation.description}</CardDescription>
+                    <CardTitle className="text-lg text-foreground">
+                      {automation.title}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      {automation.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <span className="text-xs text-muted-foreground">Coming Soon</span>
+                    <span className="text-xs text-muted-foreground">
+                      Coming Soon
+                    </span>
                   </CardContent>
                 </Card>
               );
@@ -80,10 +92,14 @@ export default function Home() {
                     <CardTitle className="text-lg text-foreground group-hover:text-primary transition-colors">
                       {automation.title}
                     </CardTitle>
-                    <CardDescription className="text-sm">{automation.description}</CardDescription>
+                    <CardDescription className="text-sm">
+                      {automation.description}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <span className="text-xs text-primary font-medium">Get Started →</span>
+                    <span className="text-xs text-primary font-medium">
+                      Get Started →
+                    </span>
                   </CardContent>
                 </Card>
               </Link>
