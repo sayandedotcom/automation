@@ -5,14 +5,6 @@
 
 declare module "sst" {
   export interface Resource {
-    "MyService": {
-      "service": string
-      "type": "sst.aws.Service"
-      "url": string
-    }
-    "MyVpc": {
-      "type": "sst.aws.Vpc"
-    }
   }
 }
 /// <reference path="sst-env.d.ts" />
