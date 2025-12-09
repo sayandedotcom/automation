@@ -38,3 +38,10 @@ yarn-error.log*
 *.pem
 
 junk
+
+# sst
+.sst
+
+
+# open-next
+.open-next
