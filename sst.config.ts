@@ -22,7 +22,7 @@ export default $config({
       environment: {
         GOOGLE_GENERATIVE_AI_API_KEY:
           process.env.GOOGLE_GENERATIVE_AI_API_KEY || "",
-        HEADFUL: process.env.HEADFUL || "true",
+        HEADFUL: process.env.HEADFUL || "true", // Containers cannot run headed browsers - no X server
       },
       dev: {
         command: "npm run dev",
